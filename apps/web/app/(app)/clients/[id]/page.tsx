@@ -11,6 +11,7 @@ import { ContextPanel } from "@/components/workspace/context-panel";
 import { useWorkspace } from "@/components/workspace/context";
 import { EvidenceDrawer } from "@/components/workspace/evidence-drawer";
 import { TurnView } from "@/components/workspace/turn-view";
+import { XrayToggle } from "@/components/workspace/xray";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { accentFor, initialsOf, periodLabel } from "@/lib/format";
@@ -158,12 +159,15 @@ function Workspace() {
               <h1 className="truncate text-[18px] font-medium leading-tight">{profile.data.name}</h1>
               <p className="truncate text-xs text-text-muted">{profile.data.category} · {periodLabel(profile.data.reportingPeriod)}</p>
             </div>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
             {client && (
-              <ul className="ml-auto flex flex-wrap items-center gap-1.5" aria-label="Sharing for cross-client analysis">
+              <ul className="flex flex-wrap items-center gap-1.5" aria-label="Sharing for cross-client analysis">
                 <li><Badge tone={client.sharing.performancePatterns ? "success" : "danger"}>{client.sharing.performancePatterns ? <Check size={11} aria-hidden /> : <Lock size={11} aria-hidden />} Performance patterns {client.sharing.performancePatterns ? "approved" : "restricted"}</Badge></li>
                 <li><Badge tone={client.sharing.creativeAssets ? "success" : "danger"}>{client.sharing.creativeAssets ? <Check size={11} aria-hidden /> : <Lock size={11} aria-hidden />} Creative assets {client.sharing.creativeAssets ? "approved" : "restricted"}</Badge></li>
               </ul>
             )}
+            <XrayToggle />
+            </div>
           </>
         ) : (
           <><Skeleton className="h-9 w-9" /><Skeleton className="h-8 w-56" /></>
@@ -172,19 +176,20 @@ function Workspace() {
       <ContextPanel clientId={id} />
 
       {/* Below 768px chat and the artifact become tabs */}
-      <div role="tablist" aria-label="Workspace view" className="flex gap-1 border-b border-border bg-surface px-4 py-2 md:hidden">
+      {artifactId && <div role="tablist" aria-label="Workspace view" className="flex gap-1 border-b border-border bg-surface px-4 py-2 md:hidden">
         {(["chat", "artifact"] as const).map((tab) => (
           <button key={tab} role="tab" aria-selected={mobileTab === tab} onClick={() => setMobileTab(tab)} className={cn("min-h-9 rounded-full px-4 text-sm font-medium", mobileTab === tab ? "bg-aqua" : "text-text-muted")}>
             {tab === "chat" ? "Conversation" : "Artifact"}
           </button>
         ))}
-      </div>
+      </div>}
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+      {/* Until there is an artifact the conversation uses the full width. When one is saved it slides in beside it. */}
+      <div className={cn("grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)]", artifactId && "md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]")}>
         {/* Conversation: its own scroll, composer anchored below */}
-        <section aria-label="Conversation" className={cn("min-h-0 flex-col md:flex", mobileTab === "chat" ? "flex" : "hidden")}>
+        <section aria-label="Conversation" className={cn("min-h-0 flex-col md:flex", !artifactId || mobileTab === "chat" ? "flex" : "hidden")}>
           <div ref={scroller} className="scroll-quiet min-h-0 flex-1 overflow-y-auto px-5 py-5" role="log" aria-live="polite" aria-label="Conversation history">
-           <div ref={content} className="space-y-6">
+           <div ref={content} className={cn("space-y-6", !artifactId && "mx-auto max-w-[760px]")}>
             {conversation.isLoading && <div className="space-y-3"><Skeleton className="ml-auto h-10 w-2/3" /><Skeleton className="h-24 w-full" /></div>}
             {conversation.isError && <ErrorNote title="The conversation could not load" action={<Button onClick={() => conversation.refetch()}>Try again</Button>}>Saved turns are safe. Only the view failed.</ErrorNote>}
             {!conversation.isLoading && turns.length === 0 && (
@@ -220,13 +225,15 @@ function Workspace() {
            </div>
           </div>
           <div className="shrink-0 border-t border-border bg-background px-4 pb-4 pt-3">
+           <div className={cn(!artifactId && "mx-auto max-w-[760px]")}>
             {sendError && <p role="alert" className="mb-2 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger">{sendError}</p>}
             <Composer sources={allSources} attachable={attachable} disabled={submit.isPending} onSend={(m, a) => send(m, a)} />
+           </div>
           </div>
         </section>
 
-        {/* Artifact: its own scroll */}
-        <section aria-label="Artifact" className={cn("min-h-0 border-l border-border bg-surface md:flex md:flex-col", mobileTab === "artifact" ? "flex flex-col" : "hidden")}>
+        {/* Artifact: its own scroll. Only present once something has been saved. */}
+        {artifactId && <section aria-label="Artifact" className={cn("fade-in min-h-0 border-l border-border bg-surface md:flex md:flex-col", mobileTab === "artifact" ? "flex flex-col" : "hidden")}>
           <ArtifactPane
             artifactId={artifactId}
             latestVersionId={latestVersionId}
@@ -235,7 +242,7 @@ function Workspace() {
             clientSlug={profile.data?.slug ?? ""}
             onAsk={fillComposer}
           />
-        </section>
+        </section>}
       </div>
 
       <EvidenceDrawer />

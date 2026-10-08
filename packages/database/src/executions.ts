@@ -268,3 +268,90 @@ export async function settleTokens(db: Queryable, agencyId: string, reserved: nu
     [agencyId, reserved, spent],
   );
 }
+
+export interface ModelCallSummary {
+  id: string;
+  task: string;
+  attempt: number;
+  requestedModel: string;
+  actualModel: string | null;
+  provider: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  durationMs: number | null;
+  costUsd: number | null;
+  costEstimated: boolean;
+  error: string | null;
+  payloadTruncated: boolean;
+  createdAt: Date;
+}
+
+/** One row per model attempt, without payload bodies. Scoped to the agency. */
+export async function listModelCalls(db: Queryable, agencyId: string, executionId: string): Promise<ModelCallSummary[]> {
+  const result = await db.query(
+    `select m.id, m.task, m.attempt, m.requested_model, m.actual_model, m.provider, m.input_tokens, m.output_tokens,
+            m.duration_ms, m.cost_usd, m.cost_estimated, m.error, m.payload_truncated, m.created_at
+       from model_calls m join executions e on e.id = m.execution_id
+      where e.id = $1 and e.agency_id = $2 order by m.created_at, m.attempt`,
+    [executionId, agencyId],
+  );
+  return result.rows.map((row) => ({
+    id: row.id, task: row.task, attempt: row.attempt, requestedModel: row.requested_model, actualModel: row.actual_model,
+    provider: row.provider, inputTokens: row.input_tokens, outputTokens: row.output_tokens, durationMs: row.duration_ms,
+    costUsd: row.cost_usd === null ? null : Number(row.cost_usd), costEstimated: row.cost_estimated, error: row.error,
+    payloadTruncated: row.payload_truncated, createdAt: row.created_at,
+  }));
+}
+
+/** The stored request and response bodies of one model call (already redacted and bounded when saved). */
+export async function getModelCallPayload(db: Queryable, agencyId: string, callId: string) {
+  const result = await db.query(
+    `select m.request_payload, m.response_payload, m.payload_truncated
+       from model_calls m join executions e on e.id = m.execution_id where m.id = $1 and e.agency_id = $2`,
+    [callId, agencyId],
+  );
+  const row = result.rows[0];
+  return row ? { request: row.request_payload as unknown, response: row.response_payload as unknown, truncated: row.payload_truncated as boolean } : null;
+}
+
+/** Everything the technical view shows about the run itself: inputs, routing, commit, timing. */
+export async function getExecutionDetail(db: Queryable, agencyId: string, executionId: string) {
+  const result = await db.query(
+    `select e.*, t.user_message, t.conversation_id, t.seq
+       from executions e left join turns t on t.id = e.turn_id where e.id = $1 and e.agency_id = $2`,
+    [executionId, agencyId],
+  );
+  const row = result.rows[0];
+  if (!row) return null;
+  return {
+    id: row.id as string,
+    kind: row.kind as string,
+    status: row.status as string,
+    attempt: row.attempt as number,
+    turnId: row.turn_id as string | null,
+    conversationId: row.conversation_id as string | null,
+    seq: row.seq as number | null,
+    request: row.user_message as string | null,
+    backendCommit: row.backend_commit as string | null,
+    routingVersion: row.routing_version as string | null,
+    routingSnapshot: row.routing_snapshot as unknown,
+    inputSnapshot: row.input_snapshot as unknown,
+    createdAt: row.created_at as Date,
+    startedAt: row.started_at as Date | null,
+    finishedAt: row.finished_at as Date | null,
+    errorCode: row.error_code as string | null,
+    errorMessage: row.error_message as string | null,
+  };
+}
+
+/** The execution behind an artifact version, via the turn that caused it. */
+export async function executionForVersion(db: Queryable, agencyId: string, versionId: string): Promise<string | null> {
+  const result = await db.query(
+    `select e.id from artifact_versions v
+       join turns t on t.id = v.cause_turn_id
+       join executions e on e.turn_id = t.id
+      where v.id = $1 and t.agency_id = $2 order by e.created_at desc limit 1`,
+    [versionId, agencyId],
+  );
+  return result.rows[0]?.id ?? null;
+}

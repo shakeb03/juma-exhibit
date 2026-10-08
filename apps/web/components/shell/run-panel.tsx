@@ -6,7 +6,7 @@ import { Badge, EmptyState } from "@/components/ui";
 import { useWorkspace } from "@/components/workspace/context";
 import { formatDuration } from "@/lib/format";
 import { useExecution, useExecutionEvents } from "@/lib/hooks";
-import { countSources, latestClaims, stepsFromEvents } from "@/lib/steps";
+import { countSources, latestClaims, planFromEvents, stepsFromEvents } from "@/lib/steps";
 
 const STATUS_LABEL: Record<string, { label: string; tone: "neutral" | "teal" | "success" | "danger" | "amber" }> = {
   queued: { label: "Waiting to start", tone: "neutral" },
@@ -46,6 +46,7 @@ export function RunPanel() {
   const list = events.data?.events ?? [];
   const steps = stepsFromEvents(list, run.status);
   const claims = latestClaims(list);
+  const plan = planFromEvents(list);
   const status = STATUS_LABEL[run.status] ?? STATUS_LABEL.queued!;
   const started = new Date(run.startedAt ?? run.createdAt).getTime();
   const ended = run.finishedAt ? new Date(run.finishedAt).getTime() : now;
@@ -59,6 +60,7 @@ export function RunPanel() {
         <span className="tabular text-xs text-text-muted" aria-label="Elapsed time">{formatDuration(Math.max(0, ended - started))}</span>
       </div>
 
+      {plan && <p className="mt-3 border-l-2 border-teal pl-3 font-serif text-sm italic leading-snug text-text-muted">{plan}</p>}
       <ol className="mt-3 space-y-1.5" aria-live="polite" aria-label="Steps">
         {steps.map((step) => (
           <li key={step.key} className="flex items-start gap-2 text-sm">

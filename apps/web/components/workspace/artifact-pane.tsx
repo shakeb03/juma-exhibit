@@ -109,7 +109,16 @@ export function ArtifactPane({
             {title && <h1 className="mt-1 text-[24px] font-medium tracking-tight">{title}</h1>}
           </div>
           <div className="space-y-4">
-            {data.blocks.map((block) => <BlockView key={block.id} block={block} metrics={data.metrics} />)}
+            {data.blocks.map((block) => (
+              <BlockView
+                key={block.id}
+                block={block}
+                metrics={data.metrics}
+                accent={accent}
+                produced={data.produced}
+                observationOrder={data.blocks.filter((b) => b.type === "observation").map((b) => b.id)}
+              />
+            ))}
           </div>
           <footer className="mt-6 border-t border-border pt-3 text-xs text-text-muted">
             {claims && <p className="tabular">Numerical claims verified: {claims.verified}/{claims.total}</p>}

@@ -141,6 +141,10 @@ export async function runClientTurn(ctx: RunContext, turnId: string): Promise<vo
     const result = await ctx.models.call("interpret", { messages, tools: GATHER_TOOLS, toolChoice: "required" });
     const calls = result.message.tool_calls ?? [];
     messages.push({ role: "assistant", content: result.message.content, ...(calls.length ? { tool_calls: calls } : {}) });
+    // The model's own one-sentence statement of intent, shown before the steps. Only recorded if it wrote one.
+    if (step === 1 && result.message.content?.trim()) {
+      await recorder.event("plan", "Plan", { text: result.message.content.trim().slice(0, 400) });
+    }
     if (calls.length === 0) break; // the model stopped calling tools; compose with what exists
 
     for (const call of calls) {

@@ -2,17 +2,22 @@
 
 import { FileText, Loader2, Paperclip, RotateCcw, XCircle } from "lucide-react";
 import { Badge, Button, ErrorNote } from "@/components/ui";
-import { useExecutionEvents } from "@/lib/hooks";
+import { useExecutionEvents, useModelCalls } from "@/lib/hooks";
 import { KIND_LABEL } from "@/lib/format";
-import { stepsFromEvents } from "@/lib/steps";
+import { planFromEvents, stepsFromEvents } from "@/lib/steps";
 import type { SourceSummary, Turn } from "@/lib/types";
 import { RichText } from "./rich-text";
 import { Statement } from "./statement";
+import { useWorkspace } from "./context";
+import { TurnXray } from "./xray";
 
 function Steps({ executionId, active }: { executionId: string; active: boolean }) {
   const events = useExecutionEvents(executionId, active);
   const steps = stepsFromEvents(events.data?.events ?? [], active ? "running" : undefined);
+  const plan = planFromEvents(events.data?.events ?? []);
   return (
+    <div className="space-y-2">
+      {plan && <p className="fade-in border-l-2 border-teal pl-3 font-serif text-[15px] italic leading-snug text-text-muted">{plan}</p>}
     <ol className="space-y-1" aria-live="polite" aria-label="What the agent is doing">
       {steps.map((step) => (
         <li key={step.key} className={`flex items-center gap-2 text-sm ${step.state === "current" ? "font-medium text-text" : "text-text-muted"}`}>
@@ -22,6 +27,7 @@ function Steps({ executionId, active }: { executionId: string; active: boolean }
         </li>
       ))}
     </ol>
+    </div>
   );
 }
 
@@ -43,6 +49,9 @@ export function TurnView({
   const reply = turn.reply;
   const inProgress = turn.status === "queued" || turn.status === "running";
   const metrics = reply?.evidence ?? {};
+  const { xray } = useWorkspace();
+  const calls = useModelCalls(turn.executionId, xray && turn.status !== "queued" && turn.status !== "running");
+  const toolCount = useExecutionEvents(xray ? turn.executionId : null, false).data?.events.filter((e) => e.kind === "tool_call").length ?? 0;
 
   return (
     <div className="space-y-3">
@@ -109,14 +118,15 @@ export function TurnView({
               const key = `${turn.id}-${index}`;
               switch (statement.type) {
                 case "observation":
-                  return <Statement key={key} kind="observation"><RichText text={statement.text} metrics={metrics} /></Statement>;
+                  return <Statement key={key} kind="observation" variant="inline"><RichText text={statement.text} metrics={metrics} /></Statement>;
                 case "hypothesis":
-                  return <Statement key={key} kind="hypothesis"><RichText text={statement.text} metrics={metrics} /></Statement>;
+                  return <Statement key={key} kind="hypothesis" variant="inline"><RichText text={statement.text} metrics={metrics} /></Statement>;
                 case "recommendation":
                   return (
                     <Statement
                       key={key}
                       kind="recommendation"
+                      variant="inline"
                       details={[
                         { label: "Why", content: <RichText text={statement.reasoning} metrics={metrics} /> },
                         { label: "Measure", content: <RichText text={statement.measurement} metrics={metrics} /> },
@@ -127,7 +137,7 @@ export function TurnView({
                     </Statement>
                   );
                 case "note":
-                  return <Statement key={key} kind="note"><RichText text={statement.text} metrics={metrics} /></Statement>;
+                  return <Statement key={key} kind="note" variant="inline"><RichText text={statement.text} metrics={metrics} /></Statement>;
               }
             })}
             {reply.raw.followUp && <p className="text-[15px] text-text-muted"><RichText text={reply.raw.followUp} metrics={metrics} /></p>}
@@ -148,6 +158,7 @@ export function TurnView({
             {reply.claims && reply.claims.total > 0 && (
               <p className="tabular text-xs text-text-muted">Numerical claims verified: {reply.claims.verified}/{reply.claims.total}</p>
             )}
+            <TurnXray calls={xray ? calls.data : undefined} tools={toolCount} claims={reply.claims} />
           </div>
         )}
 

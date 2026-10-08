@@ -91,3 +91,8 @@ export function formatInput(name: string, value: number | null, metric: { unit: 
   if (name === "spend" || name === "revenue") return `${symbol}${num(value, Math.abs(value) >= 1000 ? 0 : 2)}`;
   return num(value, Number.isInteger(value) ? 0 : 2);
 }
+
+/** Every metric id referenced by {{placeholders}} in a piece of text. */
+export function extractIds(text: string): string[] {
+  return segmentText(text).flatMap((part) => (part.type === "metric" ? [part.id] : []));
+}

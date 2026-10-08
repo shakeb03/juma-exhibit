@@ -63,7 +63,30 @@ export interface ClientProfile {
   sources: Pick<SourceSummary, "id" | "kind" | "name" | "mimeType" | "sizeBytes" | "status">[];
 }
 
+export interface ProducedBy {
+  executionId: string | null;
+  models: { task: string; model: string; provider: string | null }[];
+}
+
+export interface ModelCallView {
+  id: string;
+  task: string;
+  attempt: number;
+  requestedModel: string;
+  actualModel: string | null;
+  provider: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  durationMs: number | null;
+  costUsd: number | null;
+  costEstimated: boolean;
+  error: string | null;
+  payloadTruncated: boolean;
+  createdAt: string;
+}
+
 export interface ArtifactVersionView {
+  produced: ProducedBy;
   id: string;
   artifactId: string;
   version: number;

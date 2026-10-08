@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { submitTurnRequestSchema, type TurnSummary } from "@exhibit/contracts";
 import {
-  TooManyPendingTurnsError, loadClientProfile, loadClientSources, getExecution, getOrCreateClientConversation, getVersion, getArtifact, listEvents, listTurns,
+  TooManyPendingTurnsError, executionForVersion, getExecutionDetail, getModelCallPayload, listModelCalls, loadClientProfile, loadClientSources, getExecution, getOrCreateClientConversation, getVersion, getArtifact, listEvents, listTurns,
   listVersions, requestCancel, submitTurn, validateClientAttachments, type Database,
 } from "@exhibit/database";
 import type { AgentReply, Block } from "@exhibit/contracts";
@@ -176,6 +176,38 @@ export function conversationRoutes(app: FastifyInstance, options: { db: Database
     };
   });
 
+  // The technical record of one run: inputs, routing, commit, and timing.
+  app.get<{ Params: { id: string } }>("/v1/executions/:id/detail", async (request, reply) => {
+    const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
+    if (!params.success) return fail(reply, request, 400, "bad_request", "Invalid execution ID.");
+    const detail = await getExecutionDetail(db, session(request).agencyId, params.data.id);
+    if (!detail) return fail(reply, request, 404, "not_found", "Execution not found.");
+    return {
+      ...detail,
+      createdAt: detail.createdAt.toISOString(),
+      startedAt: detail.startedAt?.toISOString() ?? null,
+      finishedAt: detail.finishedAt?.toISOString() ?? null,
+    };
+  });
+
+  // One row per model attempt: model, tokens, latency, cost. Payload bodies are fetched per call.
+  app.get<{ Params: { id: string } }>("/v1/executions/:id/model-calls", async (request, reply) => {
+    const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
+    if (!params.success) return fail(reply, request, 400, "bad_request", "Invalid execution ID.");
+    const { agencyId } = session(request);
+    if (!(await getExecution(db, agencyId, params.data.id))) return fail(reply, request, 404, "not_found", "Execution not found.");
+    const calls = await listModelCalls(db, agencyId, params.data.id);
+    return { calls: calls.map((c) => ({ ...c, createdAt: c.createdAt.toISOString() })) };
+  });
+
+  app.get<{ Params: { id: string } }>("/v1/model-calls/:id/payload", async (request, reply) => {
+    const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
+    if (!params.success) return fail(reply, request, 400, "bad_request", "Invalid call ID.");
+    const payload = await getModelCallPayload(db, session(request).agencyId, params.data.id);
+    if (!payload) return fail(reply, request, 404, "not_found", "Model call not found.");
+    return payload;
+  });
+
   app.post<{ Params: { id: string } }>("/v1/executions/:id/cancel", async (request, reply) => {
     const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
     if (!params.success) return fail(reply, request, 400, "bad_request", "Invalid execution ID.");
@@ -200,7 +232,15 @@ export function conversationRoutes(app: FastifyInstance, options: { db: Database
     if (!version) return fail(reply, request, 404, "not_found", "Version not found.");
     const evidence = version.evidence as { metrics?: Record<string, RegistryMetric>; scopes?: unknown[] };
     const metrics = evidence.metrics ?? {};
+    // The run that produced this version, so the UI can say which models wrote it (X-ray).
+    const executionId = await executionForVersion(db, session(request).agencyId, version.id);
+    const calls = executionId ? await listModelCalls(db, session(request).agencyId, executionId) : [];
+    const produced = {
+      executionId,
+      models: [...new Map(calls.filter((c) => !c.error).map((c) => [`${c.task}:${c.actualModel ?? c.requestedModel}`, { task: c.task, model: c.actualModel ?? c.requestedModel, provider: c.provider }])).values()],
+    };
     return {
+      produced,
       id: version.id, artifactId: version.artifactId, version: version.version, kind: version.kind,
       causeKind: version.causeKind, causeTurnId: version.causeTurnId, createdAt: version.createdAt.toISOString(),
       blocks: version.blocks,

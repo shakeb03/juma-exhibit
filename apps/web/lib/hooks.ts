@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
 import type {
-  ArtifactSummary, ArtifactVersionView, ClientProfile, ClientSummary, ConversationView, ExecutionEventView, ExecutionView,
+  ArtifactSummary, ArtifactVersionView, ClientProfile, ClientSummary, ConversationView, ExecutionEventView, ExecutionView, ModelCallView,
   SourcePreview, SourceSummary,
 } from "./types";
 
@@ -106,3 +106,11 @@ export function useUpdateSharing() {
     onSuccess: () => client.invalidateQueries({ queryKey: ["clients"] }),
   });
 }
+
+export const useModelCalls = (executionId: string | null, enabled = true) =>
+  useQuery({
+    queryKey: ["model-calls", executionId],
+    queryFn: async () => (await api<{ calls: ModelCallView[] }>(`/executions/${executionId}/model-calls`)).calls,
+    enabled: Boolean(executionId) && enabled,
+    staleTime: 30_000,
+  });

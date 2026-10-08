@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countSources, latestClaims, stepsFromEvents } from "./steps";
+import { countSources, latestClaims, planFromEvents, stepsFromEvents } from "./steps";
 import type { ExecutionEventView } from "./types";
 
 let id = 0;
@@ -62,5 +62,14 @@ describe("run summaries", () => {
     expect(latestClaims(events)).toEqual({ text: "5 of 5 verified", passed: true });
     expect(countSources(events)).toBe(2);
     expect(latestClaims([])).toBeNull();
+  });
+});
+
+describe("planFromEvents", () => {
+  it("returns the agent's own one-sentence plan, and nothing when it did not write one", () => {
+    expect(planFromEvents([event("progress", "Run started"), event("plan", "Plan", { text: "I'll pull the two latest campaigns and compare them." })])).toBe("I'll pull the two latest campaigns and compare them.");
+    expect(planFromEvents([event("progress", "Run started")])).toBeNull();
+    // The plan is not a step: it is shown above the steps.
+    expect(stepsFromEvents([event("plan", "Plan", { text: "x" })], "running").map((s) => s.label)).toEqual(["Starting"]);
   });
 });

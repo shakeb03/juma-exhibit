@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accentFor, formatDuration, formatInput, initialsOf, periodLabel, relativeTime, segmentText } from "./format";
+import { accentFor, extractIds, formatDuration, formatInput, initialsOf, periodLabel, relativeTime, segmentText } from "./format";
 
 describe("segmentText", () => {
   it("splits text around metric placeholders so each number can be inspected", () => {
@@ -51,5 +51,12 @@ describe("labels and times", () => {
     expect(accentFor("unknown")).toBe("#075e61");
     expect(initialsOf("Marlowe & Finch")).toBe("MF");
     expect(initialsOf("Ridgeline Outfitters")).toBe("RO");
+  });
+});
+
+describe("extractIds", () => {
+  it("lists every metric a piece of text cites", () => {
+    expect(extractIds("A {{metric:X:ctr}} and {{cmp:X->Y:ctr:rel}}; none here.")).toEqual(["metric:X:ctr", "cmp:X->Y:ctr:rel"]);
+    expect(extractIds("plain")).toEqual([]);
   });
 });

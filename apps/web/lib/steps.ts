@@ -87,3 +87,10 @@ export function latestClaims(events: ExecutionEventView[]): { text: string; pass
 export function countSources(events: ExecutionEventView[]): number {
   return events.filter((e) => e.kind === "tool_call" && ["retrieve_campaigns", "read_source", "read_creative_references", "read_client_context", "discover_sources"].includes(e.name)).length;
 }
+
+/** The agent's own one-sentence statement of intent, if it wrote one. */
+export function planFromEvents(events: ExecutionEventView[]): string | null {
+  const event = events.find((e) => e.kind === "plan");
+  const text = (event?.payload as { text?: string } | null)?.text;
+  return text ? text : null;
+}

@@ -26,6 +26,9 @@ interface WorkspaceState {
   clearFill: () => void;
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
+  /** X-ray overlays where every claim came from: metric IDs, checks, and the models involved. */
+  xray: boolean;
+  setXray: (on: boolean) => void;
 }
 
 const Context = createContext<WorkspaceState | null>(null);
@@ -36,6 +39,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [evidence, setEvidence] = useState<EvidenceTarget | null>(null);
   const [pendingFill, setPendingFill] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [xray, setXray] = useState(false);
 
   // Callbacks are stable, so effects that depend on them do not re-run on every state change.
   const addAttachment = useCallback((id: string) => setAttachments((list) => (list.includes(id) || list.length >= 5 ? list : [...list, id])), []);
@@ -52,8 +56,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       evidence, openEvidence, closeEvidence,
       pendingFill, fillComposer: setPendingFill, clearFill,
       sidebarOpen, setSidebarOpen,
+      xray, setXray,
     }),
-    [attachments, addAttachment, removeAttachment, clearAttachments, activeExecutionId, evidence, openEvidence, closeEvidence, pendingFill, clearFill, sidebarOpen],
+    [xray, attachments, addAttachment, removeAttachment, clearAttachments, activeExecutionId, evidence, openEvidence, closeEvidence, pendingFill, clearFill, sidebarOpen],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

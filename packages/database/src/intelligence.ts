@@ -1,3 +1,4 @@
+import type { QueryResultRow } from "pg";
 import type { CampaignRow, CanvasEdge, CanvasNode } from "@exhibit/contracts";
 import type { Queryable } from "./transaction.js";
 
@@ -32,21 +33,9 @@ export async function loadClientPermissions(db: Queryable, agencyId: string, cli
 
 const num = (value: string | number | null): number | null => (value === null ? null : Number(value));
 
-/**
- * Campaign rows from the client's own campaign data, only when performance patterns are approved.
- * Rows that arrived as turn attachments (kind 'attachment') are never part of intelligence.
- */
-export async function loadApprovedCampaignRows(db: Queryable, agencyId: string, clientId: string): Promise<CampaignRow[]> {
-  const result = await db.query(
-    `select r.*, to_char(r.start_date, 'YYYY-MM-DD') as start_text, to_char(r.end_date, 'YYYY-MM-DD') as end_text
-       from campaign_rows r
-       join sources s on s.id = r.source_id and s.agency_id = r.agency_id
-       join clients c on c.id = r.client_id and c.agency_id = r.agency_id
-      where r.agency_id = $1 and r.client_id = $2 and s.kind = 'campaign_data' and c.share_performance = true
-      order by r.end_date, r.campaign_id`,
-    [agencyId, clientId],
-  );
-  return result.rows.map((row) => ({
+/** Map a campaign_rows record (with start_text/end_text columns) to the shared row shape. */
+export function mapCampaignRow(row: QueryResultRow): CampaignRow {
+  return {
     campaignId: row.campaign_id,
     campaignName: row.campaign_name,
     channel: row.channel,
@@ -61,7 +50,24 @@ export async function loadApprovedCampaignRows(db: Queryable, agencyId: string, 
     revenue: num(row.revenue),
     attributionWindow: row.attribution_window,
     creativeRefId: row.creative_ref_id,
-  }));
+  };
+}
+
+/**
+ * Campaign rows from the client's own campaign data, only when performance patterns are approved.
+ * Rows that arrived as turn attachments (kind 'attachment') are never part of intelligence.
+ */
+export async function loadApprovedCampaignRows(db: Queryable, agencyId: string, clientId: string): Promise<CampaignRow[]> {
+  const result = await db.query(
+    `select r.*, to_char(r.start_date, 'YYYY-MM-DD') as start_text, to_char(r.end_date, 'YYYY-MM-DD') as end_text
+       from campaign_rows r
+       join sources s on s.id = r.source_id and s.agency_id = r.agency_id
+       join clients c on c.id = r.client_id and c.agency_id = r.agency_id
+      where r.agency_id = $1 and r.client_id = $2 and s.kind = 'campaign_data' and c.share_performance = true
+      order by r.end_date, r.campaign_id`,
+    [agencyId, clientId],
+  );
+  return result.rows.map(mapCampaignRow);
 }
 
 export interface CreativeReferenceRecord {

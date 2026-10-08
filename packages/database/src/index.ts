@@ -4,3 +4,7 @@ export * from "./transaction.js";
 export * from "./sessions.js";
 export * from "./clients.js";
 export * from "./intelligence.js";
+export * from "./conversations.js";
+export * from "./executions.js";
+export * from "./artifacts.js";
+export * from "./clientData.js";

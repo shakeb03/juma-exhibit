@@ -8,6 +8,7 @@ import {
 } from "@exhibit/database";
 import type { Config } from "../config.js";
 import { seedAgency } from "../seed/seed.js";
+import { conversationRoutes } from "../conversations/plugin.js";
 import { RateLimiter } from "./rateLimit.js";
 import { csrfTokenFor, hashToken, newSessionToken, safeEqual } from "./tokens.js";
 
@@ -24,7 +25,7 @@ export interface SessionOptions {
   db: Database;
   config: Pick<
     Config,
-    "proxySecret" | "appOrigin" | "sessionTtlMs" | "agencyTokenBudget" | "sessionCreatesPerHour" | "maxActiveAgencies" | "demoEntryCode" | "fixturesDir"
+    "proxySecret" | "appOrigin" | "commit" | "sessionTtlMs" | "agencyTokenBudget" | "sessionCreatesPerHour" | "maxActiveAgencies" | "demoEntryCode" | "fixturesDir"
   >;
 }
 
@@ -114,6 +115,8 @@ export async function sessionPlugin(app: FastifyInstance, options: SessionOption
       }
       request.session = session;
     });
+
+    await protectedApp.register(conversationRoutes, { db, config });
 
     protectedApp.get("/v1/session", async (request) => toResponse(request.session!));
 

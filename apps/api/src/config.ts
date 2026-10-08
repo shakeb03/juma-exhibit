@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { loadRouting, type RoutingTable } from "./ai/routing.js";
 import { resolveFixturesDir } from "./seed/fixturesDir.js";
 
 const configSchema = z.object({
@@ -15,6 +16,9 @@ const configSchema = z.object({
   MAX_ACTIVE_AGENCIES: z.coerce.number().int().positive().default(200),
   DEMO_ENTRY_CODE: z.string().optional(),
   FIXTURES_DIR: z.string().optional(),
+  PAYLOAD_MAX_BYTES: z.coerce.number().int().positive().default(100_000),
+  RUN_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
+  WORKER_ENABLED: z.enum(["true", "false"]).default("true"),
   GIT_COMMIT: z.string().optional(),
   RAILWAY_GIT_COMMIT_SHA: z.string().optional(),
 });
@@ -35,6 +39,10 @@ export interface Config {
   /** Off by default: the demo opens without setup. */
   demoEntryCode: string | null;
   fixturesDir: string;
+  payloadMaxBytes: number;
+  runTimeoutMs: number;
+  workerEnabled: boolean;
+  routing: RoutingTable;
 }
 
 /** Validate required configuration at startup and fail with a readable list of problems. */
@@ -62,5 +70,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     maxActiveAgencies: value.MAX_ACTIVE_AGENCIES,
     demoEntryCode: value.DEMO_ENTRY_CODE ? value.DEMO_ENTRY_CODE : null,
     fixturesDir: resolveFixturesDir(value.FIXTURES_DIR),
+    payloadMaxBytes: value.PAYLOAD_MAX_BYTES,
+    runTimeoutMs: value.RUN_TIMEOUT_MS,
+    workerEnabled: value.WORKER_ENABLED === "true",
+    routing: loadRouting(env),
   };
 }

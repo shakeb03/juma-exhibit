@@ -3,7 +3,7 @@
 
 const ALLOWED_PATH = /^[a-z0-9-]+(\/[A-Za-z0-9._-]+)*$/;
 const SAFE_METHODS = new Set(["GET", "HEAD"]);
-const FORWARDED_REQUEST_HEADERS = ["content-type", "cookie", "accept", "idempotency-key"];
+const FORWARDED_REQUEST_HEADERS = ["content-type", "cookie", "accept", "idempotency-key", "x-csrf-token"];
 
 function config() {
   const backendUrl = process.env.BACKEND_URL;
@@ -35,6 +35,9 @@ async function handle(request: Request, context: { params: Promise<{ path: strin
   upstream.search = url.search;
 
   const headers = new Headers({ "x-proxy-secret": secret });
+  // Pass the visitor's address so the API can rate-limit per visitor; it trusts this only after the secret check.
+  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  if (forwardedFor) headers.set("x-client-ip", forwardedFor);
   for (const name of FORWARDED_REQUEST_HEADERS) {
     const value = request.headers.get(name);
     if (value) headers.set(name, value);

@@ -10,6 +10,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@exhibit/contracts": "workspace:*",
     "node-pg-migrate": "^9.0.0",
     "pg": "^8.23.1"
   },

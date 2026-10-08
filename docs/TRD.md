@@ -270,13 +270,13 @@ Context resolution for a chat turn:
 
 1. Find the nodes connected to the chat node in the stored revision.
 2. For every client node, resolve sharing flags on the server at execution time. A client with no approvals contributes nothing; the chat reply says so.
-3. Performance-pattern context contains normalized per-1,000-impression inputs and calculated rates; exclude raw totals, audience descriptions, and private client briefs.
+3. Performance-pattern context contains normalized per-1,000-impression inputs and calculated rates; exclude raw totals, audience descriptions, and private client briefs. To let limitations such as different budgets still be stated, each campaign carries coarse scale bands (for example "10k to 20k") instead of raw spend or impressions. Grouped patterns (by visual style and storytelling approach) include a within-channel breakdown so a channel effect is not mistaken for a creative effect. Turn attachments and previous work are never part of intelligence context.
 4. Creative context is included only for clients with creative-assets approval, and only the approved references.
 5. User-added Markdown or text briefs, references, and ideas are explicit canvas context. Bound total text to 12,000 characters and imported files to 12 KB, with clear errors. Do not silently truncate canvas context.
 6. Recheck selected permissions and source fingerprints before analysis, before commit, and before serving answers, artifacts, traces, approval, or PDFs.
 7. With no creative references available, visual or storytelling questions get a request for the missing evidence. Generic experiment concepts can still use approved performance findings.
 
-The chat answers naturally and can produce artifacts (category insight, campaign concepts, experiment plan) on request. Each concept or experiment includes the idea, supporting observations, adaptation for the new client, and suggested measurement. Hypotheses are labelled untested. Source references must resolve to approved records. Permission checks are enforced in code, never delegated to the model. Store source and permission versions so changed approvals or inputs invalidate old results.
+The chat answers naturally and can produce artifacts (category insight, campaign concepts, experiment plan) on request. Each concept or experiment includes the idea, supporting observations, adaptation for the new client, and suggested measurement. Hypotheses are labelled untested. Source references must resolve to approved records. Permission checks are enforced in code, never delegated to the model: one module builds the only context a chat node's prompts and tools receive, and every data query repeats the sharing check in SQL as a second barrier. Canvas references to a client's own files are refused, since those are reachable only through that client's approvals. Store source and permission versions so changed approvals or inputs invalidate old results.
 
 ## 13. Model routing
 

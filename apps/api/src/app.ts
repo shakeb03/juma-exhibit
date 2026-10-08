@@ -1,7 +1,9 @@
 import { timingSafeEqual } from "node:crypto";
 import Fastify, { type FastifyInstance } from "fastify";
 import type { ApiError, HealthResponse, ReadyResponse, VersionResponse } from "@exhibit/contracts";
+import type { Database } from "@exhibit/database";
 import type { Config } from "./config.js";
+import { sessionPlugin, type SessionOptions } from "./session/plugin.js";
 
 export const API_VERSION = "0.0.0";
 
@@ -10,6 +12,9 @@ export interface AppDependencies {
   pingDatabase: () => Promise<void>;
   /** Disable request logging (tests). Defaults to enabled. */
   logger?: boolean;
+  /** When provided, session and data routes are registered. */
+  db?: Database;
+  sessionConfig?: SessionOptions["config"];
 }
 
 /** Routes that platform health checks call without the proxy secret. */
@@ -84,6 +89,11 @@ export function buildApp(
     }
     return { status: "ready", database: "ok" } satisfies ReadyResponse;
   });
+
+  if (deps.db) {
+    if (!deps.sessionConfig) throw new Error("sessionConfig is required when db is provided.");
+    app.register(sessionPlugin, { db: deps.db, config: deps.sessionConfig });
+  }
 
   app.get("/v1/version", async (): Promise<VersionResponse> => ({
     apiVersion: API_VERSION,

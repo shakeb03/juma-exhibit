@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { AgentReply, ArtifactDraft, CampaignRow } from "@exhibit/contracts";
 import { MetricRegistry } from "./registry.js";
-import { numbersIn, unverifiedNumbers, validateDraft, validateReply, type ValidationContext } from "./validate.js";
+import { literalNumbersIn } from "./base.js";
+import { numbersIn, unverifiedNumbers, validateDraft, validateReply, validateSingleBlock, type ValidationContext } from "./validate.js";
 
 const row = (id: string): CampaignRow => ({
   campaignId: id, campaignName: id, channel: "Pinterest", period: "2026-09", startDate: "2026-09-01", endDate: "2026-09-30",
@@ -200,5 +201,47 @@ describe("validateDraft", () => {
   it("applies the same evidence rules inside artifacts", () => {
     const typed = { ...obs(), text: "CTR was 2.4%." };
     expect(validateDraft(draft([typed, hyp(), rec()]), "performance_report", context()).problems.some((p) => /Numbers not tied/.test(p.message))).toBe(true);
+  });
+});
+
+describe("single-block validation for comment edits", () => {
+  const original = { id: "b1", type: "observation" as const, text: "CTR was {{metric:RL-PIN-0901:ctr}}.", metricIds: ["metric:RL-PIN-0901:ctr"], sourceRefs: [] };
+
+  it("accepts a reworded block and keeps its ID", () => {
+    const ctx = context({ existingBlockIds: new Set(["b1"]) });
+    const result = validateSingleBlock({ type: "observation", text: "Clicks converted to {{metric:RL-PIN-0901:ctr}} CTR.", metricIds: ["metric:RL-PIN-0901:ctr"], sourceRefs: [] }, original, ctx);
+    expect(result.problems).toEqual([]);
+    expect(result.block?.id).toBe("b1");
+    expect(result.claims).toEqual({ verified: 1, total: 1 });
+  });
+
+  it("refuses a type change, an unknown metric, a typed performance number, and a cause", () => {
+    const ctx = context({ existingBlockIds: new Set(["b1"]) });
+    expect(validateSingleBlock({ type: "paragraph", text: "Hello." }, original, ctx).problems[0]?.message).toMatch(/observation block/);
+    expect(validateSingleBlock({ type: "observation", text: "CTR was {{metric:RL-PIN-0901:nope}}.", metricIds: [], sourceRefs: [] }, original, ctx).problems.length).toBeGreaterThan(0);
+    expect(validateSingleBlock({ type: "observation", text: "CTR was 4.7% overall.", metricIds: ["metric:RL-PIN-0901:ctr"], sourceRefs: [] }, original, ctx).problems.map((p) => p.message).join()).toMatch(/Numbers not tied/);
+    expect(validateSingleBlock({ type: "observation", text: "CTR was {{metric:RL-PIN-0901:ctr}} because of the photo.", metricIds: ["metric:RL-PIN-0901:ctr"], sourceRefs: [] }, original, ctx).problems.length).toBeGreaterThan(0);
+  });
+
+  it("keeps which observations a recommendation rests on when the model drops them, and rejects invented ones", () => {
+    const rec = { id: "r1", type: "recommendation" as const, text: "Test.", reasoning: "Why.", basedOn: ["b1"], measurement: "M.", limitation: "L." };
+    const ctx = context({ existingBlockIds: new Set(["b1", "r1"]) });
+    const kept = validateSingleBlock({ type: "recommendation", text: "Run the test.", reasoning: "Why.", basedOn: [], measurement: "M.", limitation: "L." }, rec, ctx);
+    expect(kept.block).toMatchObject({ basedOn: ["b1"] });
+    expect(validateSingleBlock({ type: "recommendation", text: "Run.", reasoning: "Why.", basedOn: ["ghost"], measurement: "M.", limitation: "L." }, rec, ctx).problems[0]?.message).toMatch(/does not match a block/);
+  });
+});
+
+describe("numbers a person typed by hand", () => {
+  it("are kept when the model returns an unchanged block, and still rejected when the model invents them", () => {
+    const paragraph = { action: "update" as const, title: "T", blocks: [{ type: "paragraph" as const, id: "p1", text: "Spend rose 42% per the client call." }, { type: "observation" as const, text: "CTR was {{metric:RL-PIN-0901:ctr}}.", metricIds: ["metric:RL-PIN-0901:ctr"], sourceRefs: [] }] } as ArtifactDraft;
+    const strict = context({ existingBlockIds: new Set(["p1"]) });
+    expect(validateDraft(paragraph, "client_summary", strict).problems.map((p) => p.message).join()).toMatch(/Numbers not tied/);
+
+    const base = [{ id: "p1", type: "paragraph" as const, text: "Spend rose 42% per the client call." }];
+    const allowed = context({ existingBlockIds: new Set(["p1"]), allowedNumbers: numbersIn(literalNumbersIn(base)) });
+    expect(validateDraft(paragraph, "client_summary", allowed).problems).toEqual([]);
+    const invented = { ...paragraph, blocks: [{ type: "paragraph" as const, id: "p1", text: "Spend rose 77%." }, paragraph.blocks[1]!] } as ArtifactDraft;
+    expect(validateDraft(invented, "client_summary", allowed).problems.map((p) => p.message).join()).toMatch(/Numbers not tied/);
   });
 });

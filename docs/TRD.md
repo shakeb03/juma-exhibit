@@ -243,7 +243,7 @@ Numerical values are rendered from metric records. Evidence links resolve to dat
 
 Every change creates a new version: a conversation turn, an accepted comment edit, or a manual edit. Each version records what created it. Approval attaches to one exact version, and any new version has no approval. Draft exports carry a Draft label; an Approved label requires approval of the exported version.
 
-**As built:** `POST /v1/artifact-versions/:id/approve` is idempotent and keeps the first timestamp. `POST /v1/artifact-versions/:id/export` renders the PDF in the request with `pdf-lib` (pure JavaScript, standard fonts, no headless browser, so it bundles and runs on Railway unchanged), stores the bytes and SHA-256, and reuses the one row per version and label, so repeating an export returns the same file. The label is decided at export time from the approval; approving afterwards creates a separate Approved file and leaves the Draft one alone. `GET /v1/exports/:id/file` serves it, scoped to the owning agency. Draft PDFs carry a watermark and footer label. The browser UI disables Approve on an out-of-date canvas result; the server does not yet re-check that, and manual edits and comment edits are still to come.
+**As built:** `POST /v1/artifact-versions/:id/approve` is idempotent and keeps the first timestamp. `POST /v1/artifact-versions/:id/export` renders the PDF in the request with `pdf-lib` (pure JavaScript, standard fonts, no headless browser, so it bundles and runs on Railway unchanged), stores the bytes and SHA-256, and reuses the one row per version and label, so repeating an export returns the same file. The label is decided at export time from the approval; approving afterwards creates a separate Approved file and leaves the Draft one alone. `GET /v1/exports/:id/file` serves it, scoped to the owning agency. Draft PDFs carry a watermark and footer label. The browser UI disables Approve on an out-of-date canvas result; the server does not yet re-check that.
 
 ## 11. Comments and editing
 
@@ -259,11 +259,20 @@ Every change creates a new version: a conversation turn, an accepted comment edi
 
 The server enforces the single-block rule by diffing the resulting block list; a patch that alters any other block is rejected as a defect and recorded.
 
+**As built:**
+- Routes: `POST /v1/artifact-versions/:id/comments` (saves the comment and queues a `comment_edit` run), `GET /v1/artifacts/:id/comments`, `POST /v1/comments/:id/accept|reject|retry`.
+- The model gets one tool, `propose_block`, generated from the block's own Zod schema, and sees only the block, the comment, any highlighted text, the version's calculated metrics, and the client's brand notes (none for canvas artifacts). Its routing task is `edit_block`.
+- `validateSingleBlock` shares its content rules with whole-artifact validation. It refuses a type change, unknown metric IDs, typed performance numbers, and causal wording in observations, and keeps `basedOn` when the model drops it. The model gets one repair, then the comment is marked `failed` with an honest message.
+- Accepting runs in one transaction that locks the artifact. If the block is unchanged since the comment was written, the proposal rebases onto the latest version, even after other edits. If not, the comment becomes `stale` and the reviewer can ask again. The server verifies that nothing but the commented block moved.
+- Comments on metric tables are refused for now (their caption can be edited by hand). Comments only need the block to exist; they are not blocked by an out-of-date canvas result.
+
 ### Manual editing
 
 Users can edit any block directly, including text and numbers. Saving sends the changed blocks with the base version, creates a new version at the next version number, and clears approval. Reject a save whose base version is stale. Block structure and IDs are preserved. The evidence drawer continues to show the originally calculated value. The edit is recorded as an execution event with before and after content for the geek panel. The report body and PDF do not flag manual changes. The "N of M numerical claims verified" count describes the last AI-generated base, and the geek panel states which version it applies to.
 
 Because manual edits are not rechecked, automated verification claims about report numbers apply to AI-generated versions only.
+
+**As built:** `POST /v1/artifacts/:id/edits` takes one block and only the fields that changed, against the version the person was looking at. Editable fields are listed in `EDITABLE_FIELDS` in the contracts package; IDs, types, citations and structure are not editable. The save runs under the same artifact lock as turns and comments, so a stale base is refused with `version_moved_on`. Fields left out keep their stored text, including metric placeholders; an edited observation keeps its cited metric IDs for the evidence drawer. Each save is one new version (cause `manual`) with the verification record carried over and `claimsVersion` pointing at the AI version that earned it, so the footer says so. The before/after of a manual save is stored in the version's `checks.edit`, not as an execution event, because no run exists. When a chat turn later revises the artifact, numbers written literally in the open version are allowed through so the model can return unchanged blocks; numbers it invents are still refused.
 
 ## 12. Intelligence canvas and chat nodes
 

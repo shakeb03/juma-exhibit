@@ -101,7 +101,7 @@ export interface ArtifactVersionView {
   renderedBlocks: Block[];
   metrics: Record<string, Metric>;
   scopes: { scopeId: string; label: string; campaignIds: string[]; warnings: string[] }[];
-  checks: { claims?: { verified: number; total: number }; warnings?: { path: string; message: string }[] };
+  checks: { claims?: { verified: number; total: number }; claimsVersion?: number; warnings?: { path: string; message: string }[] };
 }
 
 export interface ArtifactSummary {
@@ -243,4 +243,19 @@ export interface PassportView {
 
 export interface CanvasConversationView extends ConversationView {
   canvasRevision: number;
+}
+
+export interface CommentView {
+  id: string;
+  versionId: string;
+  versionNumber: number | null;
+  blockId: string;
+  selection: string | null;
+  body: string;
+  status: "open" | "proposed" | "accepted" | "rejected" | "stale" | "failed";
+  createdAt: string;
+  executionId: string | null;
+  resultingVersionId: string | null;
+  error: string | null;
+  proposal: { summary: string; claims: { verified: number; total: number } | null; before: Block | null; after: Block } | null;
 }

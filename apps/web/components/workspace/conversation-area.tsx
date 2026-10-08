@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FileText } from "lucide-react";
 import { Button, EmptyState, ErrorNote, Skeleton } from "@/components/ui";
 import { cn } from "@/lib/cn";
+import { useArtifact } from "@/lib/hooks";
 import type { SourceSummary, Turn } from "@/lib/types";
 import { ArtifactPane } from "./artifact-pane";
 import { Composer } from "./composer";
@@ -52,7 +53,12 @@ export function ConversationArea(props: Props) {
   const sourceMap = useMemo(() => new Map(sources.map((s) => [s.id, s])), [sources]);
   const lastWithArtifact = [...turns].reverse().find((t) => t.artifact);
   const artifactId = lastWithArtifact?.artifact?.artifactId ?? null;
-  const latestVersionId = lastWithArtifact?.artifact?.versionId ?? null;
+  const turnArtifact = lastWithArtifact?.artifact ?? null;
+  // The latest version is whichever is newer: the one a chat turn saved, or one a person saved by editing or
+  // accepting a comment, which no turn mentions.
+  const summary = useArtifact(artifactId, turnArtifact?.versionId ?? null);
+  const savedLatest = summary.data?.artifact.id === artifactId ? summary.data.versions[summary.data.versions.length - 1] : undefined;
+  const latestVersionId = savedLatest && savedLatest.version >= (turnArtifact?.version ?? 0) ? savedLatest.id : (turnArtifact?.versionId ?? null);
   const shownVersionId = selectedVersionId ?? latestVersionId;
   const staleReasons = lastWithArtifact?.reply?.stale ?? [];
   const busy = turns.some((t) => t.status === "queued" || t.status === "running");

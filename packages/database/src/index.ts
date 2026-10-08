@@ -9,3 +9,4 @@ export * from "./executions.js";
 export * from "./artifacts.js";
 export * from "./clientData.js";
 export * from "./canvas.js";
+export * from "./comments.js";

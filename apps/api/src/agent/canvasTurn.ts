@@ -8,7 +8,7 @@ import { BudgetError, ContextChangedError } from "../exec/errors.js";
 import { buildIntelligenceContext, contextChanges, toModelContext, type BuildOptions } from "../permissions/context.js";
 import { buildPatternRegistry, describePatternRegistry } from "../permissions/patternRegistry.js";
 import { CanvasError } from "../permissions/types.js";
-import { loadBaseArtifact } from "./base.js";
+import { literalNumbersIn, loadBaseArtifact } from "./base.js";
 import { composeAnswer } from "./compose.js";
 import { commitTurn, fingerprint, type ArtifactCommit } from "./persist.js";
 import { canvasSystemPrompt, historyMessages } from "./prompts.js";
@@ -81,7 +81,7 @@ export async function runCanvasTurn(ctx: RunContext, turnId: string): Promise<vo
   const validation: ValidationContext = {
     registry,
     knownRefs,
-    allowedNumbers: numbersIn([turn.userMessage, ...history.map((t) => t.userMessage), ...context.explicit.map((e) => e.text)].join("\n")),
+    allowedNumbers: numbersIn([turn.userMessage, ...history.map((t) => t.userMessage), ...context.explicit.map((e) => e.text), literalNumbersIn(loaded?.blocks ?? [])].join("\n")),
     existingBlockIds: new Set((loaded?.blocks ?? []).map((b: Block) => b.id)),
   };
 

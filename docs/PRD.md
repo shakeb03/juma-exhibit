@@ -108,6 +108,7 @@ Three ways to change an artifact; each produces a new version linked to what cau
 ### 5.4 Approval and export
 
 - Approval applies to one specific version. Any later edit, whether by conversation, comment, or manual change, requires approval again.
+- Hover a block to comment on it or edit it. A comment becomes a proposed change to that block alone, shown as a before and after; nothing changes until it is accepted. Edits by hand save as a new version, and numbers a person types are theirs.
 - The artifact pane can be closed to give the conversation the full width, and reopened from the chat or by a new version.
 - Download a PDF of any version. A version that is not approved is labelled Draft. An Approved label requires approval of the exported version.
 - An export counts as complete only after the file is successfully created.

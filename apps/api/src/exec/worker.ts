@@ -6,6 +6,7 @@ import {
 import type { ModelClient } from "../ai/types.js";
 import { routingVersion, type RoutingTable } from "../ai/routing.js";
 import { failTurn } from "../agent/persist.js";
+import { failComment } from "@exhibit/database";
 import { ModelError } from "../ai/types.js";
 import type { RunContext } from "./context.js";
 import { ContextLimitError, CanvasError } from "../permissions/types.js";
@@ -147,6 +148,7 @@ export class Worker {
     if (error instanceof CancelledError) {
       await ctx.recorder.event("error", "Run cancelled").catch(() => {});
       if (execution.turnId) await failTurn(db, execution.turnId, "cancelled", "This request was cancelled.");
+      if (execution.commentId) await failComment(db, execution.commentId, "This request was cancelled.").catch(() => {});
       await finishExecution(db, execution.id, this.owner, { status: "cancelled" });
       return;
     }
@@ -162,6 +164,7 @@ export class Worker {
       ...(error instanceof ValidationFailure ? { problems: error.problems } : {}),
     }).catch(() => {});
     if (execution.turnId) await failTurn(db, execution.turnId, "failed", failure.message).catch(() => {});
+    if (execution.commentId) await failComment(db, execution.commentId, failure.message).catch(() => {});
     await finishExecution(db, execution.id, this.owner, { status: "failed", errorCode: failure.code, errorMessage: (error as Error).message });
   }
 }

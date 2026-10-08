@@ -6,6 +6,7 @@ export interface ExecutionRecord {
   agencyId: string;
   kind: "turn" | "comment_edit" | "export";
   turnId: string | null;
+  commentId: string | null;
   status: string;
   attempt: number;
   maxAttempts: number;
@@ -24,6 +25,7 @@ const mapExecution = (row: QueryResultRow): ExecutionRecord => ({
   agencyId: row.agency_id,
   kind: row.kind,
   turnId: row.turn_id,
+  commentId: row.comment_id,
   status: row.status,
   attempt: row.attempt,
   maxAttempts: row.max_attempts,
@@ -54,6 +56,11 @@ export async function claimNextExecution(db: Queryable, owner: string, leaseMs: 
     `update turns set status = 'failed', reply_kind = 'failure',
             reply_message = 'The run stopped responding. You can try again.', completed_at = now()
       where status = 'running' and id in (select turn_id from executions where status = 'failed' and error_code = 'lease_expired')`,
+  );
+
+  await db.query(
+    `update comments set status = 'failed', proposal = '{"error":"The run stopped responding. You can try again."}'
+      where status = 'open' and id in (select comment_id from executions where status = 'failed' and error_code = 'lease_expired')`,
   );
 
   const result = await db.query(
@@ -348,9 +355,9 @@ export async function getExecutionDetail(db: Queryable, agencyId: string, execut
 export async function executionForVersion(db: Queryable, agencyId: string, versionId: string): Promise<string | null> {
   const result = await db.query(
     `select e.id from artifact_versions v
-       join turns t on t.id = v.cause_turn_id
-       join executions e on e.turn_id = t.id
-      where v.id = $1 and t.agency_id = $2 order by e.created_at desc limit 1`,
+       join executions e on (e.turn_id is not null and e.turn_id = v.cause_turn_id)
+                         or (e.comment_id is not null and e.comment_id = v.cause_comment_id)
+      where v.id = $1 and e.agency_id = $2 order by e.created_at desc limit 1`,
     [versionId, agencyId],
   );
   return result.rows[0]?.id ?? null;

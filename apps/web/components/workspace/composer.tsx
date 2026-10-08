@@ -30,6 +30,13 @@ export function Composer({
   const [text, setText] = useState("");
   const [dragging, setDragging] = useState(false);
   const [menu, setMenu] = useState(false);
+  // Escape closes the attach menu, wherever focus is.
+  useEffect(() => {
+    if (!menu) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setMenu(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [menu]);
   const area = useRef<HTMLTextAreaElement>(null);
   const byId = new Map(sources.map((s) => [s.id, s]));
 

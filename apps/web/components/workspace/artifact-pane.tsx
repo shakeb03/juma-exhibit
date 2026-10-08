@@ -4,8 +4,9 @@ import { CheckCircle2, Download, FileText, History, X } from "lucide-react";
 import { useState } from "react";
 import { Badge, Button, EmptyState, ErrorNote, Skeleton } from "@/components/ui";
 import { accentFor, formatDateTime, KIND_LABEL } from "@/lib/format";
-import { useApproveVersion, useArtifact, useArtifactVersion, useExportPdf } from "@/lib/hooks";
+import { useApproveVersion, useArtifact, useArtifactVersion, useComments, useExportPdf } from "@/lib/hooks";
 import type { ArtifactSummary } from "@/lib/types";
+import { BlockReview } from "./block-review";
 import { BlockView } from "./blocks";
 
 const CAUSE_LABEL: Record<string, string> = { turn: "Requested in chat", comment: "Accepted comment edit", manual: "Manual edit" };
@@ -65,6 +66,7 @@ export function ArtifactPane({
   const accent = accentFor(clientSlug);
   const approve = useApproveVersion(artifactId);
   const exportPdf = useExportPdf();
+  const comments = useComments(artifactId);
 
   if (!artifactId || !shownId) {
     return (
@@ -159,19 +161,32 @@ export function ArtifactPane({
             {title && <h1 className="mt-1 text-[24px] font-medium tracking-tight">{title}</h1>}
           </div>
           <div className="space-y-4">
-            {data.blocks.map((block) => (
-              <BlockView
+            {data.blocks.map((block, index) => (
+              <BlockReview
                 key={block.id}
                 block={block}
-                metrics={data.metrics}
-                accent={accent}
-                produced={data.produced}
-                observationOrder={data.blocks.filter((b) => b.type === "observation").map((b) => b.id)}
-              />
+                shown={data.renderedBlocks[index] ?? block}
+                artifactId={data.artifactId}
+                versionId={data.id}
+                canAct={isLatest}
+                comments={(comments.data ?? []).filter((c) => c.blockId === block.id)}
+                onChanged={() => onSelectVersion(null)}
+              >
+                <BlockView
+                  block={block}
+                  metrics={data.metrics}
+                  accent={accent}
+                  produced={data.produced}
+                  observationOrder={data.blocks.filter((b) => b.type === "observation").map((b) => b.id)}
+                />
+              </BlockReview>
             ))}
           </div>
           <footer className="mt-6 border-t border-border pt-3 text-xs text-text-muted">
-            {claims && <p className="tabular">Numerical claims verified: {claims.verified}/{claims.total}</p>}
+            {claims && data.causeKind === "turn" && <p className="tabular">Numerical claims verified: {claims.verified}/{claims.total}</p>}
+            {claims && data.causeKind !== "turn" && (
+              <p className="tabular">Numerical claims verified: {claims.verified}/{claims.total}, as written by the AI in version {data.checks.claimsVersion ?? "1"}. Edits since then were not rechecked.</p>
+            )}
             <p className="mt-1">Synthetic data for a fictional client. {data.approval ? `Approved ${formatDateTime(data.approval.approvedAt)}.` : "Draft, not yet approved."}</p>
           </footer>
         </div>

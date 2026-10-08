@@ -1,5 +1,6 @@
 import { createPool, deleteExpiredAgencies, pingDatabase } from "@exhibit/database";
 import { OpenRouterClient } from "./ai/openrouter.js";
+import { runCommentEdit } from "./agent/commentEdit.js";
 import { runTurn } from "./agent/runTurn.js";
 import { Worker } from "./exec/worker.js";
 import { buildApp } from "./app.js";
@@ -23,7 +24,10 @@ const worker = new Worker({
   db: runnerDb,
   models: new OpenRouterClient({ apiKey: config.openRouterApiKey, referer: config.appOrigin, title: "Exhibit A" }),
   routing: config.routing,
-  handlers: { turn: (ctx, execution) => runTurn(ctx, execution.turnId!) },
+  handlers: {
+    turn: (ctx, execution) => runTurn(ctx, execution.turnId!),
+    comment_edit: (ctx, execution) => runCommentEdit(ctx, execution.commentId!),
+  },
   backendCommit: config.commit,
   payloadMaxBytes: config.payloadMaxBytes,
   runTimeoutMs: config.runTimeoutMs,

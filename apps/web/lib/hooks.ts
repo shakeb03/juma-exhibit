@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
 import type {
   ArtifactSummary, ArtifactVersionView, ClientProfile, ClientSummary, ConversationView, ExecutionEventView, ExecutionView, ModelCallView,
-  CanvasConversationView, CanvasState, ExecutionDetail, ModelPayload, PassportView, RepoFile, RepoTree, RepositoryMeta, SourcePreview, SourceSummary,
+  CanvasConversationView, CanvasState, CommentView, ExecutionDetail, ModelPayload, PassportView, RepoFile, RepoTree, RepositoryMeta, SourcePreview, SourceSummary,
 } from "./types";
 
 export const useClients = () =>
@@ -225,5 +225,53 @@ export function useExportPdf() {
       link.remove();
       return result;
     },
+  });
+}
+
+/** Comments on an artifact. Refreshes every two seconds while any is still waiting for its proposal. */
+export const useComments = (artifactId: string | null) =>
+  useQuery({
+    queryKey: ["comments", artifactId],
+    queryFn: async () => (await api<{ comments: CommentView[] }>(`/artifacts/${artifactId}/comments`)).comments,
+    enabled: Boolean(artifactId),
+    refetchInterval: (query) => (query.state.data?.some((c) => c.status === "open") ? 2000 : false),
+  });
+
+/** After any change to the artifact, everything that shows its latest version is read again before the caller moves on. */
+function useRefreshArtifact(artifactId: string | null) {
+  const client = useQueryClient();
+  return () =>
+    Promise.all([
+      client.invalidateQueries({ queryKey: ["artifact", artifactId] }),
+      client.invalidateQueries({ queryKey: ["comments", artifactId] }),
+    ]);
+}
+
+export function useCreateComment(artifactId: string | null) {
+  const refresh = useRefreshArtifact(artifactId);
+  return useMutation({
+    mutationFn: (input: { versionId: string; blockId: string; body: string; selection?: string }) =>
+      api<CommentView>(`/artifact-versions/${input.versionId}/comments`, { method: "POST", body: { blockId: input.blockId, body: input.body, selection: input.selection } }),
+    onSuccess: refresh,
+  });
+}
+
+export function useCommentAction(artifactId: string | null, action: "accept" | "reject" | "retry") {
+  const refresh = useRefreshArtifact(artifactId);
+  return useMutation({
+    mutationFn: (commentId: string) => api<{ versionId?: string }>(`/comments/${commentId}/${action}`, { method: "POST", body: {} }),
+    onSuccess: refresh,
+    // A stale or settled comment changes state on the server; show it as it is now.
+    onError: refresh,
+  });
+}
+
+export function useManualEdit(artifactId: string | null) {
+  const refresh = useRefreshArtifact(artifactId);
+  return useMutation({
+    mutationFn: (input: { baseVersionId: string; blockId: string; fields: Record<string, string> }) =>
+      api<{ versionId: string; version: number }>(`/artifacts/${artifactId}/edits`, { method: "POST", body: input }),
+    onSuccess: refresh,
+    onError: refresh,
   });
 }

@@ -10,7 +10,7 @@ import { BudgetError } from "../exec/errors.js";
 import {
   COMPOSE_INSTRUCTION, availableMetricsNote, brandExcerpts, checksum, historyMessages, openArtifactNote, systemPrompt, userMessageWithAttachments,
 } from "./prompts.js";
-import { loadBaseArtifact } from "./base.js";
+import { literalNumbersIn, loadBaseArtifact } from "./base.js";
 import { composeAnswer, parseArgs } from "./compose.js";
 import { commitTurn, fingerprint, type ArtifactCommit } from "./persist.js";
 import { MetricRegistry, type RegistryMetric, type RegistryScope } from "./registry.js";
@@ -161,7 +161,7 @@ export async function runClientTurn(ctx: RunContext, turnId: string): Promise<vo
   const validation: ValidationContext = {
     registry,
     knownRefs,
-    allowedNumbers: numbersIn([excerpts.audience, excerpts.goals, excerpts.constraints, excerpts.standingInstructions, turn.userMessage, ...history.map((t) => t.userMessage)].join("\n")),
+    allowedNumbers: numbersIn([excerpts.audience, excerpts.goals, excerpts.constraints, excerpts.standingInstructions, turn.userMessage, ...history.map((t) => t.userMessage), literalNumbersIn(baseBlocks)].join("\n")),
     existingBlockIds: new Set(baseBlocks.map((b) => b.id)),
   };
 

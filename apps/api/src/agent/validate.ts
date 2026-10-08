@@ -1,5 +1,5 @@
 import {
-  blockSchema, type AgentReply, type ArtifactDraft, type ArtifactKind, type Block,
+  blockSchema, type AgentReply, type ArtifactDraft, type ArtifactKind, type Block, type BlockDraft,
 } from "@exhibit/contracts";
 import { extractPlaceholders, type MetricRegistry } from "./registry.js";
 
@@ -189,6 +189,44 @@ const REQUIREMENTS: Record<ArtifactKind, { need: Block["type"][][]; description:
   experiment_plan: { need: [["experiment"]], description: "at least one experiment" },
 };
 
+/** The content rules for one block, shared by whole-artifact validation and single-block comment edits. */
+function checkBlockContent(check: Checker, ctx: ValidationContext, block: BlockDraft, path: string, basedOn: (string | undefined)[]): void {
+  switch (block.type) {
+    case "heading":
+      check.text(path, block.text, true);
+      break;
+    case "paragraph":
+      check.text(path, block.text, true);
+      // A paragraph in a deliverable states findings, so it is held to the rule whether or not it shows a number.
+      check.noCause(path, block.text, true);
+      break;
+    case "observation":
+      check.observation(path, block.text, block.metricIds, block.sourceRefs);
+      break;
+    case "hypothesis":
+      check.text(path, block.text, false);
+      check.refs(path, [], block.sourceRefs);
+      break;
+    case "recommendation":
+      check.text(path, block.text, false);
+      check.text(`${path}.reasoning`, block.reasoning, false);
+      if (basedOn.length === 0) check.problems.push({ path, message: "A recommendation must cite the observation(s) it rests on in basedOn." });
+      break;
+    case "experiment":
+      check.text(path, block.hypothesis, false);
+      if (basedOn.length === 0) check.problems.push({ path, message: "An experiment must cite the observation(s) it rests on in basedOn." });
+      break;
+    case "limitation":
+      check.text(path, block.text, false);
+      break;
+    case "metric_table":
+      for (const scope of block.scopes) {
+        if (!ctx.registry.scope(scope.scopeId)) check.problems.push({ path, message: `Unknown scope "${scope.scopeId}" in metric table.` });
+      }
+      break;
+  }
+}
+
 /**
  * Validate a proposed artifact and assign stable block IDs. Reused IDs must exist in the version being
  * revised; unknown IDs are replaced rather than trusted. Temporary keys are resolved in `basedOn`.
@@ -220,40 +258,7 @@ export function validateDraft(draft: ArtifactDraft, kind: ArtifactKind, ctx: Val
       });
     }
 
-    switch (block.type) {
-      case "heading":
-        check.text(path, block.text, true);
-        break;
-      case "paragraph":
-        check.text(path, block.text, true);
-        // A paragraph in a deliverable states findings, so it is held to the rule whether or not it shows a number.
-        check.noCause(path, block.text, true);
-        break;
-      case "observation":
-        check.observation(path, block.text, block.metricIds, block.sourceRefs);
-        break;
-      case "hypothesis":
-        check.text(path, block.text, false);
-        check.refs(path, [], block.sourceRefs);
-        break;
-      case "recommendation":
-        check.text(path, block.text, false);
-        check.text(`${path}.reasoning`, block.reasoning, false);
-        if (basedOn.length === 0) check.problems.push({ path, message: "A recommendation must cite the observation(s) it rests on in basedOn." });
-        break;
-      case "experiment":
-        check.text(path, block.hypothesis, false);
-        if (basedOn.length === 0) check.problems.push({ path, message: "An experiment must cite the observation(s) it rests on in basedOn." });
-        break;
-      case "limitation":
-        check.text(path, block.text, false);
-        break;
-      case "metric_table":
-        for (const scope of block.scopes) {
-          if (!ctx.registry.scope(scope.scopeId)) check.problems.push({ path, message: `Unknown scope "${scope.scopeId}" in metric table.` });
-        }
-        break;
-    }
+    checkBlockContent(check, ctx, block, path, basedOn);
 
     // Drop the draft-only fields; the stored block gets its final ID.
     const rest = Object.fromEntries(Object.entries(block).filter(([field]) => field !== "key" && field !== "id"));
@@ -285,5 +290,40 @@ export function validateDraft(draft: ArtifactDraft, kind: ArtifactKind, ctx: Val
     warnings: check.warnings,
     claims: { verified: check.verified, total: check.total },
     blocks: check.problems.length === 0 ? blocks : [],
+  };
+}
+
+/**
+ * Check one replacement block from a comment edit. The block keeps its ID and cannot change type. References
+ * to other blocks (`basedOn`) must name blocks that exist in the version, so a proposal cannot invent structure.
+ */
+export function validateSingleBlock(
+  proposed: BlockDraft,
+  original: Block,
+  ctx: ValidationContext,
+): { problems: Problem[]; warnings: Problem[]; claims: Claims; block: Block | null } {
+  const check = new Checker(ctx);
+  const path = original.id;
+  if (proposed.type !== original.type) {
+    check.problems.push({ path, message: `The block is a ${original.type}. Return a ${original.type} block, not a ${proposed.type}.` });
+    return { problems: check.problems, warnings: [], claims: { verified: 0, total: 0 }, block: null };
+  }
+  let basedOn: string[] = [];
+  if ("basedOn" in proposed && "basedOn" in original) {
+    // Which observations a block rests on is structure the editor does not own; keep it if the model dropped it.
+    basedOn = proposed.basedOn.length > 0 ? proposed.basedOn : original.basedOn;
+    for (const ref of basedOn) {
+      if (!ctx.existingBlockIds.has(ref)) check.problems.push({ path, message: `basedOn "${ref}" does not match a block in this version.` });
+    }
+  }
+  checkBlockContent(check, ctx, proposed, path, basedOn);
+  const rest = Object.fromEntries(Object.entries(proposed).filter(([field]) => field !== "key" && field !== "id"));
+  const parsed = blockSchema.safeParse({ ...rest, id: original.id, ...("basedOn" in proposed ? { basedOn } : {}) });
+  if (!parsed.success) check.problems.push({ path, message: parsed.error.issues.map((i) => i.message).join("; ") });
+  return {
+    problems: check.problems,
+    warnings: check.warnings,
+    claims: { verified: check.verified, total: check.total },
+    block: check.problems.length === 0 && parsed.success ? parsed.data : null,
   };
 }

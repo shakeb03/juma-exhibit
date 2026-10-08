@@ -1,4 +1,4 @@
-import type { ArtifactKind, Block } from "@exhibit/contracts";
+import { EDITABLE_FIELDS, type ArtifactKind, type Block } from "@exhibit/contracts";
 import { getArtifact, getVersion, latestArtifactForConversation, type Queryable } from "@exhibit/database";
 import type { RegistryMetric, RegistryScope } from "./registry.js";
 
@@ -35,4 +35,12 @@ export async function loadBaseArtifact(
     artifactId: artifact.id, kind: artifact.kind as ArtifactKind, title: artifact.title, versionId: version.id, version: version.version,
     blocks: version.blocks, metrics: evidence.metrics ?? {}, scopes: evidence.scopes ?? [],
   };
+}
+
+/**
+ * Numbers written literally in an open artifact. A person may have typed them by hand, and the model keeps unchanged
+ * blocks as they are when it revises, so these must not be rejected as unverified when sent back.
+ */
+export function literalNumbersIn(blocks: Block[]): string {
+  return blocks.flatMap((b) => EDITABLE_FIELDS[b.type].map((f) => String((b as Record<string, unknown>)[f] ?? ""))).join("\n");
 }

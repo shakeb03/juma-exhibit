@@ -1,5 +1,6 @@
 import type { FastifyInstance, LightMyRequestResponse } from "fastify";
 import { createPool, type Database } from "@exhibit/database";
+import { runCommentEdit } from "../agent/commentEdit.js";
 import { runTurn } from "../agent/runTurn.js";
 import { buildApp } from "../app.js";
 import { loadConfig, type Config } from "../config.js";
@@ -135,7 +136,7 @@ export function createHarness(): Harness {
     },
     worker(model, overrides = {}) {
       return new Worker({
-        db, models: model, routing: config.routing, handlers: { turn: (ctx, execution) => runTurn(ctx, execution.turnId!) },
+        db, models: model, routing: config.routing, handlers: { turn: (ctx, execution) => runTurn(ctx, execution.turnId!), comment_edit: (ctx, execution) => runCommentEdit(ctx, execution.commentId!) },
         backendCommit: "test-commit", payloadMaxBytes: config.payloadMaxBytes, runTimeoutMs: 30_000, leaseMs: 5_000,
         sleep: async () => {}, retryDelayMs: 1, ...overrides,
       });

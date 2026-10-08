@@ -89,6 +89,7 @@ export interface ModelCallView {
 
 export interface ArtifactVersionView {
   produced: ProducedBy;
+  approval: { approvedAt: string } | null;
   id: string;
   artifactId: string;
   version: number;
@@ -105,7 +106,7 @@ export interface ArtifactVersionView {
 
 export interface ArtifactSummary {
   artifact: { id: string; kind: string; title: string; currentVersionId: string | null };
-  versions: { id: string; version: number; causeKind: string; causeTurnId: string | null; approved: boolean; createdAt: string }[];
+  versions: { id: string; version: number; causeKind: string; causeTurnId: string | null; approved: boolean; approvedAt: string | null; createdAt: string }[];
 }
 
 export interface ExecutionEventView {

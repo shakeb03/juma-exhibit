@@ -1,10 +1,10 @@
 "use client";
 
-import { FileText, History } from "lucide-react";
+import { CheckCircle2, Download, FileText, History, X } from "lucide-react";
 import { useState } from "react";
 import { Badge, Button, EmptyState, ErrorNote, Skeleton } from "@/components/ui";
 import { accentFor, formatDateTime, KIND_LABEL } from "@/lib/format";
-import { useArtifact, useArtifactVersion } from "@/lib/hooks";
+import { useApproveVersion, useArtifact, useArtifactVersion, useExportPdf } from "@/lib/hooks";
 import type { ArtifactSummary } from "@/lib/types";
 import { BlockView } from "./blocks";
 
@@ -46,6 +46,7 @@ export function ArtifactPane({
   onSelectVersion,
   clientSlug,
   onAsk,
+  onClose,
   stale = [],
 }: {
   artifactId: string | null;
@@ -54,12 +55,16 @@ export function ArtifactPane({
   onSelectVersion: (id: string | null) => void;
   clientSlug: string;
   onAsk: (text: string) => void;
+  /** Hides the artifact so the conversation takes the full width again. */
+  onClose: () => void;
   stale?: string[];
 }) {
   const shownId = selectedVersionId ?? latestVersionId;
   const version = useArtifactVersion(shownId);
   const summary = useArtifact(artifactId, latestVersionId);
   const accent = accentFor(clientSlug);
+  const approve = useApproveVersion(artifactId);
+  const exportPdf = useExportPdf();
 
   if (!artifactId || !shownId) {
     return (
@@ -86,6 +91,7 @@ export function ArtifactPane({
   const isLatest = shownId === latestVersionId;
   const title = summary.data?.artifact.title;
   const claims = data.checks.claims;
+  const approvedEarlier = [...(summary.data?.versions ?? [])].reverse().find((v) => v.approved && v.id !== data.id);
 
   return (
     <article className="flex h-full min-h-0 flex-col" aria-label={`${KIND_LABEL[data.kind] ?? "Artifact"}, version ${data.version}`}>
@@ -93,9 +99,46 @@ export function ArtifactPane({
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone="aqua"><FileText size={12} aria-hidden /> {KIND_LABEL[data.kind] ?? data.kind}</Badge>
           <Badge>Version {data.version}</Badge>
-          <Badge tone="amber">Draft</Badge>
+          {data.approval ? (
+            <Badge tone="success"><CheckCircle2 size={12} aria-hidden /> Approved {formatDateTime(data.approval.approvedAt)}</Badge>
+          ) : (
+            <Badge tone="amber">Draft</Badge>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close artifact"
+            title="Close artifact"
+            className="ml-auto inline-flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-surface-muted hover:text-text"
+          >
+            <X size={18} aria-hidden />
+          </button>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {!data.approval && (
+            <Button
+              variant="primary"
+              compact
+              disabled={approve.isPending || (isLatest && stale.length > 0)}
+              onClick={() => approve.mutate(data.id)}
+              title={isLatest && stale.length > 0 ? "Run this again before approving, because its sources changed." : "Approve exactly this version"}
+            >
+              <CheckCircle2 size={15} aria-hidden /> {approve.isPending ? "Approving…" : "Approve this version"}
+            </Button>
+          )}
+          <Button compact disabled={exportPdf.isPending} onClick={() => exportPdf.mutate(data.id)}>
+            <Download size={15} aria-hidden /> {exportPdf.isPending ? "Preparing PDF…" : data.approval ? "Download approved PDF" : "Download draft PDF"}
+          </Button>
           <div className="ml-auto">{summary.data && <VersionMenu summary={summary.data} selected={shownId} onSelect={(id) => onSelectVersion(id === latestVersionId ? null : id)} />}</div>
         </div>
+        {(approve.isError || exportPdf.isError) && (
+          <p role="alert" className="mt-2 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger">
+            {((approve.error ?? exportPdf.error) as Error).message}
+          </p>
+        )}
+        {!data.approval && isLatest && approvedEarlier && (
+          <p className="mt-2 text-sm text-text-muted" role="status">Changed since version {approvedEarlier.version} was approved. This version needs its own approval.</p>
+        )}
         {stale.length > 0 && isLatest && (
           <p role="status" className="mt-2 rounded-md bg-amber-light px-3 py-2 text-sm text-amber-dark">
             <span className="font-medium">Out of date.</span> {stale.join(" ")}
@@ -129,7 +172,7 @@ export function ArtifactPane({
           </div>
           <footer className="mt-6 border-t border-border pt-3 text-xs text-text-muted">
             {claims && <p className="tabular">Numerical claims verified: {claims.verified}/{claims.total}</p>}
-            <p className="mt-1">Synthetic data for a fictional client. Draft, not yet approved.</p>
+            <p className="mt-1">Synthetic data for a fictional client. {data.approval ? `Approved ${formatDateTime(data.approval.approvedAt)}.` : "Draft, not yet approved."}</p>
           </footer>
         </div>
       </div>

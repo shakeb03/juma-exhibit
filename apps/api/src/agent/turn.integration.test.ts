@@ -219,6 +219,45 @@ describe("artifacts and revisions", () => {
     expect(current.current_version_id).toBe(v2.id);
   });
 
+  it("approves exactly one version and exports a PDF labelled by its state", async () => {
+    const w = await h.newWorld();
+    const model = new ScriptedModel(latestTwoScript(() => finish(goodReply(), reportArtifact())));
+    const first = await w.submit("ridgeline-outfitters", "Create a performance report comparing our last two Pinterest campaigns.");
+    await h.drain(h.worker(model));
+    const v1 = (await h.db.query(
+      "select v.id from artifact_versions v join artifacts a on a.id = v.artifact_id where a.conversation_id = $1", [first.conversationId],
+    )).rows[0];
+
+    // A draft export is labelled Draft, and repeating it reuses the same file.
+    const draft = (await w.post(`/v1/artifact-versions/${v1.id}/export`, {})).json();
+    expect(draft.label).toBe("Draft");
+    const again = (await w.post(`/v1/artifact-versions/${v1.id}/export`, {})).json();
+    expect(again.exportId).toBe(draft.exportId);
+    const file = await w.get(`/v1/exports/${draft.exportId}/file`);
+    expect(file.statusCode).toBe(200);
+    expect(file.headers["content-type"]).toBe("application/pdf");
+    expect(file.headers["content-disposition"]).toMatch(/draft\.pdf/);
+    expect(file.rawPayload.subarray(0, 5).toString()).toBe("%PDF-");
+
+    // Approval is idempotent and keeps its first timestamp.
+    const a1 = (await w.post(`/v1/artifact-versions/${v1.id}/approve`, {})).json();
+    const a2 = (await w.post(`/v1/artifact-versions/${v1.id}/approve`, {})).json();
+    expect(a2.approvedAt).toBe(a1.approvedAt);
+    expect((await w.get(`/v1/artifact-versions/${v1.id}`)).json().approval.approvedAt).toBe(a1.approvedAt);
+
+    // After approval the export is a separate Approved file; the draft file is untouched.
+    const approved = (await w.post(`/v1/artifact-versions/${v1.id}/export`, {})).json();
+    expect(approved.label).toBe("Approved");
+    expect(approved.exportId).not.toBe(draft.exportId);
+    expect((await w.get(`/v1/exports/${draft.exportId}/file`)).statusCode).toBe(200);
+
+    // Another workspace can neither approve nor download.
+    const other = await h.newWorld();
+    expect((await other.post(`/v1/artifact-versions/${v1.id}/approve`, {})).statusCode).toBe(404);
+    expect((await other.post(`/v1/artifact-versions/${v1.id}/export`, {})).statusCode).toBe(404);
+    expect((await other.get(`/v1/exports/${approved.exportId}/file`)).statusCode).toBe(404);
+  });
+
   it("asks a focused clarification instead of guessing, and creates nothing", async () => {
     const w = await h.newWorld();
     const model = new ScriptedModel((request) => {

@@ -3,10 +3,12 @@ import { z } from "zod";
 import { submitTurnRequestSchema, type TurnSummary } from "@exhibit/contracts";
 import {
   TooManyPendingTurnsError, executionForVersion, getExecutionDetail, getModelCallPayload, listModelCalls, loadClientProfile, loadClientSources, getExecution, getOrCreateClientConversation, getVersion, getArtifact, listEvents, listTurns,
-  listVersions, requestCancel, submitTurn, validateClientAttachments, type Database,
+  listVersions, approveVersion, getApproval, ensureExport, completeExport, failExport, getExportFile, requestCancel, submitTurn, validateClientAttachments, type Database,
 } from "@exhibit/database";
 import type { AgentReply, Block } from "@exhibit/contracts";
+import { createHash } from "node:crypto";
 import { renderBlocks, renderReply } from "../agent/render.js";
+import { renderArtifactPdf } from "../export/pdf.js";
 import { formatMetric, type RegistryMetric } from "../agent/registry.js";
 import type { Config } from "../config.js";
 import { RepositoryError, RepositoryReader } from "../repository/github.js";
@@ -16,6 +18,11 @@ type Session = NonNullable<FastifyRequest["session"]>;
 export function fail(reply: FastifyReply, request: FastifyRequest, status: number, code: string, message: string) {
   return reply.status(status).send({ error: { code, message, requestId: request.id } });
 }
+
+const KIND_LABEL: Record<string, string> = {
+  performance_report: "Performance report", campaign_brief: "Campaign brief", client_summary: "Client summary",
+  campaign_concepts: "Campaign concepts", experiment_plan: "Experiment plan", category_insight: "Category insight",
+};
 
 /** A metric as the browser needs it: the calculation record plus the display string. */
 const withDisplay = (metric: RegistryMetric) => ({ ...metric, display: formatMetric(metric) });
@@ -244,8 +251,10 @@ export function conversationRoutes(app: FastifyInstance, options: { db: Database
       executionId,
       models: [...new Map(calls.filter((c) => !c.error).map((c) => [`${c.task}:${c.actualModel ?? c.requestedModel}`, { task: c.task, model: c.actualModel ?? c.requestedModel, provider: c.provider }])).values()],
     };
+    const approval = await getApproval(db, session(request).agencyId, version.id);
     return {
       produced,
+      approval: approval ? { approvedAt: approval.approvedAt.toISOString() } : null,
       id: version.id, artifactId: version.artifactId, version: version.version, kind: version.kind,
       causeKind: version.causeKind, causeTurnId: version.causeTurnId, createdAt: version.createdAt.toISOString(),
       blocks: version.blocks,
@@ -253,6 +262,66 @@ export function conversationRoutes(app: FastifyInstance, options: { db: Database
       metrics: Object.fromEntries(Object.entries(metrics).map(([id, metric]) => [id, withDisplay(metric)])),
       scopes: evidence.scopes ?? [], checks: version.checks,
     };
+  });
+
+  // Approval applies to exactly one version. A later version is a new draft until it is approved too.
+  app.post<{ Params: { id: string } }>("/v1/artifact-versions/:id/approve", async (request, reply) => {
+    const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
+    if (!params.success) return fail(reply, request, 400, "bad_request", "Invalid version ID.");
+    const approval = await approveVersion(db, session(request).agencyId, params.data.id, session(request).sessionId);
+    if (!approval) return fail(reply, request, 404, "not_found", "Version not found.");
+    return { versionId: approval.versionId, approvedAt: approval.approvedAt.toISOString() };
+  });
+
+  // The PDF is labelled by the version's state at export time. Exporting twice reuses the same file.
+  app.post<{ Params: { id: string } }>("/v1/artifact-versions/:id/export", async (request, reply) => {
+    const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
+    if (!params.success) return fail(reply, request, 400, "bad_request", "Invalid version ID.");
+    const { agencyId } = session(request);
+    const version = await getVersion(db, agencyId, params.data.id);
+    if (!version) return fail(reply, request, 404, "not_found", "Version not found.");
+    const artifact = await getArtifact(db, agencyId, version.artifactId);
+    const approval = await getApproval(db, agencyId, version.id);
+    const label = approval ? "Approved" : "Draft";
+    const record = await ensureExport(db, agencyId, version.id, label);
+    if (record.status !== "succeeded") {
+      try {
+        const evidence = version.evidence as { metrics?: Record<string, RegistryMetric> };
+        const metrics = evidence.metrics ?? {};
+        const claims = (version.checks as { claims?: { verified: number; total: number } }).claims ?? null;
+        const data = await renderArtifactPdf({
+          title: artifact?.title ?? "Untitled",
+          kindLabel: KIND_LABEL[version.kind] ?? "Artifact",
+          version: version.version,
+          label,
+          approvedAt: approval?.approvedAt ?? null,
+          createdAt: version.createdAt,
+          blocks: renderBlocks(version.blocks as Block[], (id) => metrics[id]),
+          metrics: Object.fromEntries(Object.entries(metrics).map(([id, metric]) => [id, { label: metric.label, display: formatMetric(metric) }])),
+          claims,
+          accent: [0, 0.45, 0.47],
+        });
+        await completeExport(db, agencyId, record.id, { data, sha256: createHash("sha256").update(data).digest("hex") });
+      } catch (error) {
+        request.log.error({ err: error }, "pdf export failed");
+        await failExport(db, agencyId, record.id, "The PDF could not be created.");
+        return fail(reply, request, 500, "export_failed", "The PDF could not be created. Try again.");
+      }
+    }
+    return { exportId: record.id, label, versionId: version.id, version: version.version };
+  });
+
+  app.get<{ Params: { id: string } }>("/v1/exports/:id/file", async (request, reply) => {
+    const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
+    if (!params.success) return fail(reply, request, 400, "bad_request", "Invalid export ID.");
+    const file = await getExportFile(db, session(request).agencyId, params.data.id);
+    if (!file) return fail(reply, request, 404, "not_found", "Export not found.");
+    const name = `${file.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "artifact"}-v${file.version}-${file.label.toLowerCase()}.pdf`;
+    return reply
+      .header("content-type", "application/pdf")
+      .header("content-disposition", `attachment; filename="${name}"`)
+      .header("cache-control", "private, no-store")
+      .send(file.data);
   });
 
   // ---- In-app code browser: allowlisted source at the deployed commit ----

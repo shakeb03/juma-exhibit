@@ -54,6 +54,8 @@ async function handle(request: Request, context: { params: Promise<{ path: strin
   const outgoing = new Headers();
   const contentType = response.headers.get("content-type");
   if (contentType) outgoing.set("content-type", contentType);
+  const disposition = response.headers.get("content-disposition");
+  if (disposition) outgoing.set("content-disposition", disposition);
   for (const cookie of response.headers.getSetCookie()) outgoing.append("set-cookie", cookie);
   outgoing.set("cache-control", "no-store");
 

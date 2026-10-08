@@ -199,3 +199,31 @@ export function useCancelCanvasExecution(nodeId: string | null) {
     onSuccess: () => client.invalidateQueries({ queryKey: ["canvas-conversation", nodeId] }),
   });
 }
+
+/** Approving fixes the exact version being viewed. Later edits become a new draft. */
+export function useApproveVersion(artifactId: string | null) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (versionId: string) => api<{ versionId: string; approvedAt: string }>(`/artifact-versions/${versionId}/approve`, { method: "POST", body: {} }),
+    onSuccess: (_data, versionId) => {
+      client.invalidateQueries({ queryKey: ["artifact-version", versionId] });
+      client.invalidateQueries({ queryKey: ["artifact", artifactId] });
+    },
+  });
+}
+
+/** Creates (or reuses) the PDF for a version, then hands the file to the browser as a download. */
+export function useExportPdf() {
+  return useMutation({
+    mutationFn: async (versionId: string) => {
+      const result = await api<{ exportId: string; label: "Draft" | "Approved" }>(`/artifact-versions/${versionId}/export`, { method: "POST", body: {} });
+      const link = document.createElement("a");
+      link.href = `/api/exports/${result.exportId}/file`;
+      link.download = "";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      return result;
+    },
+  });
+}

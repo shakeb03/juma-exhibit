@@ -243,6 +243,8 @@ Numerical values are rendered from metric records. Evidence links resolve to dat
 
 Every change creates a new version: a conversation turn, an accepted comment edit, or a manual edit. Each version records what created it. Approval attaches to one exact version, and any new version has no approval. Draft exports carry a Draft label; an Approved label requires approval of the exported version.
 
+**As built:** `POST /v1/artifact-versions/:id/approve` is idempotent and keeps the first timestamp. `POST /v1/artifact-versions/:id/export` renders the PDF in the request with `pdf-lib` (pure JavaScript, standard fonts, no headless browser, so it bundles and runs on Railway unchanged), stores the bytes and SHA-256, and reuses the one row per version and label, so repeating an export returns the same file. The label is decided at export time from the approval; approving afterwards creates a separate Approved file and leaves the Draft one alone. `GET /v1/exports/:id/file` serves it, scoped to the owning agency. Draft PDFs carry a watermark and footer label. The browser UI disables Approve on an out-of-date canvas result; the server does not yet re-check that, and manual edits and comment edits are still to come.
+
 ## 11. Comments and editing
 
 ### Anchored comments with AI proposals

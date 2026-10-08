@@ -8,6 +8,7 @@ import {
 } from "@exhibit/database";
 import type { Config } from "../config.js";
 import { seedAgency } from "../seed/seed.js";
+import { canvasRoutes } from "../canvas/plugin.js";
 import { conversationRoutes } from "../conversations/plugin.js";
 import { RateLimiter } from "./rateLimit.js";
 import { csrfTokenFor, hashToken, newSessionToken, safeEqual } from "./tokens.js";
@@ -117,6 +118,7 @@ export async function sessionPlugin(app: FastifyInstance, options: SessionOption
     });
 
     await protectedApp.register(conversationRoutes, { db, config });
+    await protectedApp.register(canvasRoutes, { db, config });
 
     protectedApp.get("/v1/session", async (request) => toResponse(request.session!));
 

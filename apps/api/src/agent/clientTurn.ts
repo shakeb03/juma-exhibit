@@ -1,20 +1,21 @@
 import {
-  finishArgsSchema, type AgentReply, type ArtifactKind, type Block, type FinishArgs,
+  type AgentReply, type Block,
 } from "@exhibit/contracts";
 import {
-  conversationAgency, getTurn, getVersion, latestArtifactForConversation, loadClientProfile, loadClientSource,
-  recentTurns, setExecutionSnapshot, validateClientAttachments, getArtifact,
+  conversationAgency, getTurn, loadClientProfile, loadClientSource, recentTurns, setExecutionSnapshot, validateClientAttachments,
 } from "@exhibit/database";
-import type { ChatMessage, ToolCall } from "../ai/types.js";
+import type { ChatMessage } from "../ai/types.js";
 import type { RunContext } from "../exec/context.js";
-import { BudgetError, ValidationFailure } from "../exec/errors.js";
+import { BudgetError } from "../exec/errors.js";
 import {
   COMPOSE_INSTRUCTION, availableMetricsNote, brandExcerpts, checksum, historyMessages, openArtifactNote, systemPrompt, userMessageWithAttachments,
 } from "./prompts.js";
+import { loadBaseArtifact } from "./base.js";
+import { composeAnswer, parseArgs } from "./compose.js";
 import { commitTurn, fingerprint, type ArtifactCommit } from "./persist.js";
 import { MetricRegistry, type RegistryMetric, type RegistryScope } from "./registry.js";
 import { ClientToolbox, FINISH_TOOL, GATHER_TOOLS } from "./tools.js";
-import { numbersIn, validateDraft, validateReply, type Claims, type Problem, type ValidationContext } from "./validate.js";
+import { numbersIn, type ValidationContext } from "./validate.js";
 
 const MAX_TOOL_STEPS = 8;
 const MAX_TOOL_RESULT_CHARS = 9000;
@@ -23,14 +24,6 @@ const compact = (value: unknown) => {
   const json = JSON.stringify(value);
   return json.length > MAX_TOOL_RESULT_CHARS ? `${json.slice(0, MAX_TOOL_RESULT_CHARS)}… [result truncated for length]` : json;
 };
-
-function parseArgs(raw: string): { ok: true; value: unknown } | { ok: false; error: string } {
-  try {
-    return { ok: true, value: raw.trim() === "" ? {} : JSON.parse(raw) };
-  } catch {
-    return { ok: false, error: "Arguments were not valid JSON." };
-  }
-}
 
 /**
  * One client conversation turn. Phase one gathers evidence with a fast tool-calling model; phase two
@@ -60,29 +53,10 @@ export async function runClientTurn(ctx: RunContext, turnId: string): Promise<vo
   // The artifact being worked on: the one the user was looking at, otherwise the latest in this conversation.
   const registry = new MetricRegistry();
   const knownRefs = new Set<string>();
-  let base: { artifactId: string; kind: ArtifactKind; title: string; versionId: string; version: number } | null = null;
-  let baseBlocks: Block[] = [];
-  if (turn.referencedVersionId) {
-    const version = await getVersion(db, agencyId, turn.referencedVersionId);
-    const artifact = version ? await getArtifact(db, agencyId, version.artifactId) : null;
-    if (version && artifact && version.conversationId === turn.conversationId) {
-      base = { artifactId: artifact.id, kind: artifact.kind as ArtifactKind, title: artifact.title, versionId: version.id, version: version.version };
-      baseBlocks = version.blocks;
-      const evidence = version.evidence as { metrics?: Record<string, RegistryMetric>; scopes?: RegistryScope[] };
-      registry.preload(evidence.metrics ?? {}, evidence.scopes ?? []);
-    }
-  } else {
-    const latest = await latestArtifactForConversation(db, agencyId, turn.conversationId);
-    if (latest) {
-      const version = await getVersion(db, agencyId, latest.currentVersionId);
-      if (version) {
-        base = { artifactId: latest.id, kind: latest.kind as ArtifactKind, title: latest.title, versionId: version.id, version: version.version };
-        baseBlocks = version.blocks;
-        const evidence = version.evidence as { metrics?: Record<string, RegistryMetric>; scopes?: RegistryScope[] };
-        registry.preload(evidence.metrics ?? {}, evidence.scopes ?? []);
-      }
-    }
-  }
+  const loaded = await loadBaseArtifact(db, agencyId, turn.conversationId, turn.referencedVersionId);
+  const base = loaded ? { artifactId: loaded.artifactId, kind: loaded.kind, title: loaded.title, versionId: loaded.versionId, version: loaded.version } : null;
+  const baseBlocks: Block[] = loaded?.blocks ?? [];
+  if (loaded) registry.preload(loaded.metrics, loaded.scopes);
   for (const block of baseBlocks) {
     if ("sourceRefs" in block) block.sourceRefs.forEach((ref) => knownRefs.add(ref));
   }
@@ -192,113 +166,20 @@ export async function runClientTurn(ctx: RunContext, turnId: string): Promise<vo
   };
 
   messages.push({ role: "user", content: COMPOSE_INSTRUCTION });
-  let finished: { args: FinishArgs; blocks: Block[]; kind: ArtifactKind | null; claims: Claims; warnings: Problem[] } | null = null;
-  let lastProblems: Problem[] = [];
+  const outcome = await composeAnswer({
+    ctx, task: "explain", messages, tools: [...GATHER_TOOLS, FINISH_TOOL], validation, base: base ? { kind: base.kind } : null,
+    analysed: () => registry.touched > 0,
+    repairHint: "Use only metric ids that tools returned or that are listed as already calculated.",
+  });
 
-  // One repair for content problems. A reply that simply forgot to call finish is a nudge and does not use it up.
-  let contentFailures = 0;
-  let nudges = 0;
-  for (let attempt = 1; !finished && contentFailures < 2 && nudges < 3; attempt++) {
-    await ctx.checkpoint();
-    await recorder.event("progress", attempt === 1 ? "Writing the answer" : contentFailures > 0 ? "Repairing the answer after failed checks" : "Asking for the answer again");
-    const result = await ctx.models.call("explain", {
-      messages,
-      tools: [...GATHER_TOOLS, FINISH_TOOL],
-      // Not forced: some models reject a forced tool choice. A missing finish call is repaired below.
-      toolChoice: "auto",
+  if (outcome.type === "clarification") {
+    await commitTurn(db, {
+      executionId: ctx.executionId, owner: ctx.owner, turnId, conversationId: turn.conversationId, agencyId,
+      replyKind: "clarification", replyMessage: outcome.question, replyData: { options: outcome.options }, sourceFingerprint: "",
     });
-    const clarify = result.message.tool_calls?.find((c) => c.function.name === "ask_clarification");
-    if (clarify) {
-      const parsedClarify = parseArgs(clarify.function.arguments);
-      const outcome = parsedClarify.ok ? await toolbox.run("ask_clarification", parsedClarify.value) : null;
-      if (outcome?.kind === "clarification") {
-        await recorder.event("progress", "Asked a clarifying question", { question: outcome.question });
-        await commitTurn(db, {
-          executionId: ctx.executionId, owner: ctx.owner, turnId, conversationId: turn.conversationId, agencyId,
-          replyKind: "clarification", replyMessage: outcome.question, replyData: { options: outcome.options }, sourceFingerprint: "",
-        });
-        return;
-      }
-    }
-    const call: ToolCall | undefined = result.message.tool_calls?.find((c) => c.function.name === "finish");
-    messages.push({ role: "assistant", content: result.message.content, ...(result.message.tool_calls ? { tool_calls: result.message.tool_calls } : {}) });
-
-    const problems: Problem[] = [];
-    let args: FinishArgs | null = null;
-    if (!call) {
-      problems.push({ path: "finish", message: "You must deliver the answer by calling finish." });
-    } else if (result.finishReason === "length") {
-      problems.push({ path: "finish", message: "Your answer was cut off at the length limit and could not be read. Write a much shorter answer: fewer blocks, one or two sentences each, and a one-sentence reply." });
-    } else {
-      const parsed = parseArgs(call.function.arguments);
-      if (!parsed.ok) problems.push({ path: "finish", message: parsed.error });
-      else {
-        // Models sometimes send an empty or null artifact when none was asked for. That means "no artifact".
-        const value = parsed.value as { artifact?: { blocks?: unknown[]; title?: unknown } | null };
-        if (value && typeof value === "object" && "artifact" in value) {
-          const a = value.artifact;
-          if (a === null || a === undefined || (typeof a === "object" && !(a.blocks && a.blocks.length) && !a.title)) delete value.artifact;
-        }
-        const shaped = finishArgsSchema.safeParse(parsed.value);
-        if (!shaped.success) problems.push(...shaped.error.issues.map((i) => ({ path: `finish.${i.path.join(".")}`, message: i.message })));
-        else args = shaped.data;
-      }
-    }
-
-    let blocks: Block[] = [];
-    let kind: ArtifactKind | null = null;
-    let claims: Claims = { verified: 0, total: 0 };
-    let warnings: Problem[] = [];
-    if (args) {
-      validation.analysed = registry.touched > 0;
-      validation.hasArtifact = Boolean(args.artifact);
-      const replyResult = validateReply(args.reply, validation);
-      problems.push(...replyResult.problems);
-      claims = replyResult.claims;
-      warnings = replyResult.warnings;
-      if (args.artifact) {
-        if (args.artifact.action === "update" && !base) problems.push({ path: "artifact", message: "There is no open artifact to update. Use action \"create\" with a kind." });
-        kind = args.artifact.action === "update" ? (base?.kind ?? null) : (args.artifact.kind ?? null);
-        if (!kind) problems.push({ path: "artifact.kind", message: "A new artifact needs a kind." });
-        else {
-          const draftResult = validateDraft(args.artifact, kind, validation);
-          problems.push(...draftResult.problems);
-          warnings = [...warnings, ...draftResult.warnings];
-          claims = { verified: claims.verified + draftResult.claims.verified, total: claims.total + draftResult.claims.total };
-          blocks = draftResult.blocks;
-        }
-      }
-    }
-
-    await recorder.event("check", "Validated answer", {
-      attempt, passed: problems.length === 0, problems, warnings,
-      numericalClaims: `${claims.verified} of ${claims.total} verified`,
-    });
-
-    if (problems.length === 0 && args) {
-      finished = { args, blocks, kind, claims, warnings };
-    } else {
-      lastProblems = problems;
-      if (call) {
-        contentFailures++;
-        messages.push({
-          role: "tool", tool_call_id: call.id,
-          content: `Your answer failed checks and was not saved. Fix every problem and call finish again:\n${problems.map((p) => `- ${p.path}: ${p.message}`).join("\n")}`,
-        });
-        messages.push({
-          role: "user",
-          content: `Call finish again with the corrected answer. Do not reply with plain text.${args?.artifact ? " Keep the artifact: fix the listed problems inside it rather than dropping it." : ""} Use only metric ids that tools returned or that are listed as already calculated.`,
-        });
-      } else {
-        nudges++;
-        messages.push({ role: "user", content: "You must deliver the answer by calling the finish tool. Call it now with your answer." });
-      }
-    }
+    return;
   }
-
-  if (!finished) {
-    throw new ValidationFailure("The AI output did not pass the evidence checks, so nothing was saved.", lastProblems.map((p) => `${p.path}: ${p.message}`));
-  }
+  const finished = outcome;
   if (ctx.models.attemptCount > 14) throw new BudgetError("model_call_limit", "The run reached its limit of model calls.");
 
   // ---- Commit ----

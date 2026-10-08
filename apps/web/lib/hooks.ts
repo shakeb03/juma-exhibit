@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
 import type {
   ArtifactSummary, ArtifactVersionView, ClientProfile, ClientSummary, ConversationView, ExecutionEventView, ExecutionView, ModelCallView,
-  ExecutionDetail, ModelPayload, RepoFile, RepoTree, RepositoryMeta, SourcePreview, SourceSummary,
+  CanvasConversationView, CanvasState, ExecutionDetail, ModelPayload, PassportView, RepoFile, RepoTree, RepositoryMeta, SourcePreview, SourceSummary,
 } from "./types";
 
 export const useClients = () =>
@@ -103,7 +103,12 @@ export function useUpdateSharing() {
   return useMutation({
     mutationFn: (input: { clientId: string; performancePatterns: boolean; creativeAssets: boolean }) =>
       api(`/clients/${input.clientId}/sharing`, { method: "PATCH", body: { performancePatterns: input.performancePatterns, creativeAssets: input.creativeAssets } }),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["clients"] }),
+    // A sharing change alters what a chat may see, so the passport and any saved results are re-read.
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ["clients"] });
+      client.invalidateQueries({ queryKey: ["passport"] });
+      client.invalidateQueries({ queryKey: ["canvas-conversation"] });
+    },
   });
 }
 
@@ -156,3 +161,41 @@ export const useRepoFile = (path: string | null, ref: string | null) =>
     staleTime: Infinity,
     retry: false,
   });
+
+export const useCanvas = () => useQuery({ queryKey: ["canvas"], queryFn: () => api<CanvasState>("/canvas"), staleTime: Infinity, refetchOnMount: "always" });
+
+export const usePassport = (chatNodeId: string | null, revision: number | null) =>
+  useQuery({
+    queryKey: ["passport", chatNodeId, revision],
+    queryFn: () => api<PassportView>(`/canvas/passport?chatNodeId=${encodeURIComponent(chatNodeId!)}`),
+    enabled: Boolean(chatNodeId) && revision !== null,
+  });
+
+export const useCanvasConversation = (nodeId: string | null) =>
+  useQuery({
+    queryKey: ["canvas-conversation", nodeId],
+    queryFn: () => api<CanvasConversationView>(`/canvas/chats/${encodeURIComponent(nodeId!)}/conversation`),
+    enabled: Boolean(nodeId),
+    refetchInterval: (query) => (query.state.data?.turns.some((t) => t.status === "queued" || t.status === "running") ? 2000 : false),
+  });
+
+export function useSubmitCanvasTurn(nodeId: string | null) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { message: string; referencedVersionId?: string; key?: string }) =>
+      api<{ turnId: string; executionId: string; canvasRevision: number }>(`/canvas/chats/${encodeURIComponent(nodeId!)}/turns`, {
+        method: "POST",
+        idempotencyKey: input.key ?? crypto.randomUUID(),
+        body: { message: input.message, referencedVersionId: input.referencedVersionId },
+      }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["canvas-conversation", nodeId] }),
+  });
+}
+
+export function useCancelCanvasExecution(nodeId: string | null) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (executionId: string) => api<{ status: string }>(`/executions/${executionId}/cancel`, { method: "POST", body: {} }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["canvas-conversation", nodeId] }),
+  });
+}

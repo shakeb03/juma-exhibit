@@ -1,6 +1,6 @@
 import type { FastifyInstance, LightMyRequestResponse } from "fastify";
 import { createPool, type Database } from "@exhibit/database";
-import { runClientTurn } from "../agent/clientTurn.js";
+import { runTurn } from "../agent/runTurn.js";
 import { buildApp } from "../app.js";
 import { loadConfig, type Config } from "../config.js";
 import { Worker } from "../exec/worker.js";
@@ -135,7 +135,7 @@ export function createHarness(): Harness {
     },
     worker(model, overrides = {}) {
       return new Worker({
-        db, models: model, routing: config.routing, handlers: { turn: (ctx, execution) => runClientTurn(ctx, execution.turnId!) },
+        db, models: model, routing: config.routing, handlers: { turn: (ctx, execution) => runTurn(ctx, execution.turnId!) },
         backendCommit: "test-commit", payloadMaxBytes: config.payloadMaxBytes, runTimeoutMs: 30_000, leaseMs: 5_000,
         sleep: async () => {}, retryDelayMs: 1, ...overrides,
       });

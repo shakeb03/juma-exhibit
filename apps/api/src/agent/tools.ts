@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { metricNameSchema, type CampaignRow, type MetricName } from "@exhibit/contracts";
+import { finishArgsSchema, metricNameSchema, type CampaignRow, type MetricName } from "@exhibit/contracts";
 import {
   loadClientCampaignRows, loadClientCreativeReferences, loadClientSource, loadClientSources,
   type ClientProfile, type Queryable,
@@ -111,48 +111,24 @@ const withPlan = (tool: ToolDefinition): ToolDefinition =>
 
 export const GATHER_TOOLS: ToolDefinition[] = GATHER_BASE.map(withPlan);
 
-export const FINISH_TOOL: ToolDefinition = fn("finish", "Deliver the answer. Always include reply. Include artifact only if the user asked for a deliverable or asked to change the open one.", {
-  type: "object",
-  properties: {
-    reply: {
-      type: "object",
-      description: "The chat answer: a short message plus labelled statements.",
-      properties: {
-        message: { type: "string", description: "One or two sentences in natural language. Metric values must be {{metric-id}} placeholders." },
-        statements: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              type: { type: "string", enum: ["observation", "hypothesis", "recommendation", "note"] },
-              text: { type: "string" },
-              metricIds: { type: "array", items: { type: "string" }, description: "Observation only: metric ids it rests on" },
-              sourceRefs: { type: "array", items: { type: "string" }, description: "Observation only: campaign or document refs retrieved in this run" },
-              reasoning: { type: "string", description: "Recommendation only" },
-              measurement: { type: "string", description: "Recommendation only: how to measure it" },
-              limitation: { type: "string", description: "Recommendation only: what limits it" },
-            },
-            required: ["type", "text"],
-          },
-        },
-        followUp: { type: "string" },
-      },
-      required: ["message", "statements"],
-    },
-    artifact: {
-      type: "object",
-      description: "Optional deliverable. Blocks: heading{level,text}, paragraph{text}, metric_table{caption,scopes:[{label,scopeId}],metrics}, observation{text,metricIds,sourceRefs}, hypothesis{text,basedOn,sourceRefs}, recommendation{text,reasoning,basedOn,measurement,limitation}, experiment{title,hypothesis,design,measurement,limitation,basedOn}, limitation{text}. basedOn lists keys of observation blocks. Reuse an existing block id when keeping or editing a block.",
-      properties: {
-        action: { type: "string", enum: ["create", "update"] },
-        kind: { type: "string", enum: ["performance_report", "campaign_brief", "client_summary", "campaign_concepts", "experiment_plan"] },
-        title: { type: "string" },
-        blocks: { type: "array", items: { type: "object", properties: { type: { type: "string" }, key: { type: "string" }, id: { type: "string" } }, required: ["type"], additionalProperties: true } },
-      },
-      required: ["action", "title", "blocks"],
-    },
+export const ASK_CLARIFICATION_TOOL: ToolDefinition = GATHER_TOOLS.find((t) => t.function.name === "ask_clarification")!;
+
+/**
+ * The finish tool's parameters are generated from the same schema that validates the answer, so every field a
+ * block needs is declared. Hand-written descriptions let some models fill in only the fields they were shown.
+ */
+const finishSchema = z.toJSONSchema(finishArgsSchema, { io: "input", unrepresentable: "any" }) as Record<string, unknown>;
+delete finishSchema.$schema;
+
+export const FINISH_TOOL: ToolDefinition = {
+  type: "function",
+  function: {
+    name: "finish",
+    description:
+      "Deliver the answer. Always include reply (a short message, plus labelled statements when there is no artifact). Include artifact only if the user asked for a deliverable or asked to change the open one; give new blocks a key, and reference observation keys in basedOn. Reuse an existing block id when keeping or editing a block. Every block type has its own required fields: fill all of them.",
+    parameters: finishSchema,
   },
-  required: ["reply"],
-});
+};
 
 const truncate = (text: string, max: number) => (text.length > max ? { text: text.slice(0, max), truncated: true, originalChars: text.length } : { text, truncated: false, originalChars: text.length });
 

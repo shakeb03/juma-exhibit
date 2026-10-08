@@ -50,6 +50,17 @@ describe("stepsFromEvents", () => {
   });
 });
 
+describe("canvas runs", () => {
+  const resolved = event("progress", "Resolved what this chat may see", { clients: [{ performance: true, creative: true }, { performance: true, creative: false }, { performance: false, creative: false }], explicit: 1, excluded: 2 });
+  it("shows applying permissions as a step, with how many things were excluded", () => {
+    const steps = stepsFromEvents([resolved], "running");
+    expect(steps[0]).toMatchObject({ label: "Applying permissions", detail: "2 excluded" });
+  });
+  it("counts sources as approved clients plus text on the canvas, not tool calls", () => {
+    expect(countSources([resolved])).toBe(3); // two approved clients and one piece of text; the restricted client is not a source
+  });
+});
+
 describe("run summaries", () => {
   it("reports the latest claim check and the number of sources read", () => {
     const events = [

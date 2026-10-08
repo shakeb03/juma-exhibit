@@ -7,6 +7,7 @@ import type { ClientSummary } from "@/lib/types";
 export const SCENARIO_PROMPTS = {
   evidence: "Compare our last two Pinterest campaigns. Explain what changed and suggest what we should try next.",
   memory: "Write the September performance report for Elise.",
+  permissions: "Use the visual patterns supported by Ridgeline Outfitters' evidence and Marlowe & Finch's storytelling examples to propose three concepts for Tidewell Swim.",
 } as const;
 
 /** Three guided starting points. Each runs the real system; free-form input is always available. */
@@ -28,8 +29,8 @@ export function Scenarios({ clients }: { clients: ClientSummary[] }) {
       icon: ShieldCheck,
       title: "Respect permissions",
       line: "Combine approved patterns from two brands, and watch restricted material stay out.",
-      href: "/intelligence",
-      cta: "Open the canvas",
+      href: "/intelligence?scenario=permissions",
+      cta: "Combine two brands",
     },
     {
       key: "memory",

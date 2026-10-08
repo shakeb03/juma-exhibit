@@ -40,7 +40,7 @@ export interface RegistryScope {
   warnings: string[];
 }
 
-const LABELS: Record<MetricName, string> = {
+export const METRIC_LABELS: Record<MetricName, string> = {
   spend: "Spend",
   revenue: "Revenue",
   cpc: "Cost per click",
@@ -126,7 +126,7 @@ export class MetricRegistry {
     for (const metric of Object.values(set.metrics)) {
       this.metrics.set(metric.id, {
         id: metric.id,
-        label: LABELS[metric.name],
+        label: METRIC_LABELS[metric.name],
         unit: UNIT_BY_METRIC[metric.name],
         change: "none",
         value: metric.value,
@@ -188,6 +188,12 @@ export class MetricRegistry {
       }
     }
     return out;
+  }
+
+  /** Register metrics that were computed elsewhere, such as the normalized rates shared under performance approval. */
+  registerExternal(scope: RegistryScope, metrics: RegistryMetric[]): void {
+    this.scopes.set(scope.scopeId, scope);
+    for (const metric of metrics) this.metrics.set(metric.id, metric);
   }
 
   /** Restore metrics from a saved artifact version, so a revision can keep citing them. */

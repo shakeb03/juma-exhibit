@@ -46,6 +46,7 @@ export function ArtifactPane({
   onSelectVersion,
   clientSlug,
   onAsk,
+  stale = [],
 }: {
   artifactId: string | null;
   latestVersionId: string | null;
@@ -53,6 +54,7 @@ export function ArtifactPane({
   onSelectVersion: (id: string | null) => void;
   clientSlug: string;
   onAsk: (text: string) => void;
+  stale?: string[];
 }) {
   const shownId = selectedVersionId ?? latestVersionId;
   const version = useArtifactVersion(shownId);
@@ -94,6 +96,11 @@ export function ArtifactPane({
           <Badge tone="amber">Draft</Badge>
           <div className="ml-auto">{summary.data && <VersionMenu summary={summary.data} selected={shownId} onSelect={(id) => onSelectVersion(id === latestVersionId ? null : id)} />}</div>
         </div>
+        {stale.length > 0 && isLatest && (
+          <p role="status" className="mt-2 rounded-md bg-amber-light px-3 py-2 text-sm text-amber-dark">
+            <span className="font-medium">Out of date.</span> {stale.join(" ")}
+          </p>
+        )}
         {!isLatest && (
           <p className="mt-2 flex items-center gap-2 text-sm text-text-muted" role="status">
             You are viewing an earlier version.

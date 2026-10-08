@@ -11,6 +11,7 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code: string,
     readonly requestId?: string,
+    readonly body?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
@@ -18,7 +19,7 @@ export class ApiError extends Error {
 }
 
 interface RequestOptions {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   idempotencyKey?: string;
   signal?: AbortSignal;
@@ -56,7 +57,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   }
   if (!response.ok) {
     const err = (json as { error?: { code?: string; message?: string; requestId?: string } } | null)?.error;
-    throw new ApiError(err?.message ?? `Request failed (${response.status}).`, response.status, err?.code ?? "request_failed", err?.requestId);
+    throw new ApiError(err?.message ?? `Request failed (${response.status}).`, response.status, err?.code ?? "request_failed", err?.requestId, json);
   }
   return json as T;
 }

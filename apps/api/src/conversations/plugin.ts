@@ -13,26 +13,27 @@ import { RepositoryError, RepositoryReader } from "../repository/github.js";
 
 type Session = NonNullable<FastifyRequest["session"]>;
 
-function fail(reply: FastifyReply, request: FastifyRequest, status: number, code: string, message: string) {
+export function fail(reply: FastifyReply, request: FastifyRequest, status: number, code: string, message: string) {
   return reply.status(status).send({ error: { code, message, requestId: request.id } });
 }
 
 /** A metric as the browser needs it: the calculation record plus the display string. */
 const withDisplay = (metric: RegistryMetric) => ({ ...metric, display: formatMetric(metric) });
 
-interface ReplyData {
+export interface ReplyData {
   reply?: AgentReply;
   metrics?: Record<string, RegistryMetric>;
   claims?: { verified: number; total: number };
   warnings?: unknown[];
   options?: string[];
+  fingerprints?: { permission: string; source: string };
 }
 
 /** Turn a stored reply into what the browser shows: values filled in, metric details kept for evidence. */
-function presentReply(kind: string | null, message: string | null, data: ReplyData | null) {
+export function presentReply(kind: string | null, message: string | null, data: ReplyData | null, stale: string[] = []) {
   if (!kind) return null;
   if (kind !== "answer" || !data?.reply || !data.metrics) {
-    return { kind, message, options: data?.options ?? [] };
+    return { kind, message, options: data?.options ?? [], stale };
   }
   const metrics = data.metrics;
   const lookup = (id: string) => metrics[id];
@@ -46,6 +47,8 @@ function presentReply(kind: string | null, message: string | null, data: ReplyDa
     ...rendered,
     // The same reply with {{metric-id}} placeholders intact, so each number can be shown as an inspectable element.
     raw: data.reply,
+    // Reasons this result no longer matches today's permissions or canvas text. Empty when it is current.
+    stale,
     claims: data.claims ?? null,
     // Evidence for the numbers in this answer: formula, inputs, and the rows behind each.
     evidence: Object.fromEntries([...cited].filter((id) => metrics[id]).map((id) => [id, withDisplay(metrics[id]!)])),

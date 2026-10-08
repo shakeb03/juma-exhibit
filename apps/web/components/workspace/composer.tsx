@@ -15,12 +15,16 @@ export function Composer({
   attachable,
   disabled,
   onSend,
+  allowAttach = true,
+  placeholder = "Ask about this client's work, or ask for a report",
 }: {
   sources: SourceSummary[];
   /** This client's files, available for click-to-attach. */
   attachable: SourceSummary[];
   disabled: boolean;
   onSend: (message: string, attachmentIds: string[]) => void;
+  allowAttach?: boolean;
+  placeholder?: string;
 }) {
   const { attachments, addAttachment, removeAttachment, clearAttachments, pendingFill, clearFill } = useWorkspace();
   const [text, setText] = useState("");
@@ -101,7 +105,7 @@ export function Composer({
         ref={area}
         value={text}
         rows={1}
-        placeholder="Ask about this client's work, or ask for a report"
+        placeholder={placeholder}
         onChange={(event) => setText(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -113,10 +117,10 @@ export function Composer({
       />
       <div className="mt-2 flex items-center justify-between gap-2">
         <div className="relative">
-          <Button variant="ghost" compact onClick={() => setMenu((v) => !v)} aria-expanded={menu} aria-haspopup="menu">
+          {allowAttach && <Button variant="ghost" compact onClick={() => setMenu((v) => !v)} aria-expanded={menu} aria-haspopup="menu">
             <Paperclip size={15} aria-hidden /> Attach
-          </Button>
-          {menu && (
+          </Button>}
+          {allowAttach && menu && (
             <ul role="menu" aria-label="Attach a file" className="fade-in absolute bottom-full left-0 z-10 mb-1 max-h-64 w-72 overflow-y-auto rounded-[var(--radius-control)] border border-border bg-surface p-1 shadow-float">
               {attachable.map((source) => (
                 <li key={source.id} role="none">

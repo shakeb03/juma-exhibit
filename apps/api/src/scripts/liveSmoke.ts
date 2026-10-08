@@ -2,7 +2,7 @@
 // Usage: pnpm --filter @exhibit/api smoke -- "<client-slug>" "<message>" ["<follow-up>" ...]
 import { createPool } from "@exhibit/database";
 import { OpenRouterClient } from "../ai/openrouter.js";
-import { runClientTurn } from "../agent/clientTurn.js";
+import { runTurn } from "../agent/runTurn.js";
 import { buildApp } from "../app.js";
 import { loadConfig } from "../config.js";
 import { Worker } from "../exec/worker.js";
@@ -20,7 +20,7 @@ const worker = new Worker({
   db,
   models: new OpenRouterClient({ apiKey: config.openRouterApiKey, title: "Exhibit A smoke" }),
   routing: config.routing,
-  handlers: { turn: (ctx, execution) => runClientTurn(ctx, execution.turnId!) },
+  handlers: { turn: (ctx, execution) => runTurn(ctx, execution.turnId!) },
   backendCommit: "smoke",
   payloadMaxBytes: config.payloadMaxBytes,
   runTimeoutMs: config.runTimeoutMs,

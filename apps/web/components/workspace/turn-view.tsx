@@ -113,6 +113,13 @@ export function TurnView({
 
         {reply?.kind === "answer" && reply.raw && (
           <div className="space-y-2.5">
+            {reply.stale && reply.stale.length > 0 && (
+              <div role="status" className="rounded-[var(--radius-control)] border border-amber-dark/40 bg-amber-light p-3 text-sm text-amber-dark">
+                <p className="font-medium">This result is out of date</p>
+                <p className="mt-0.5">{reply.stale.join(" ")}</p>
+                <button type="button" onClick={() => onRetry(turn)} className="mt-2 font-medium underline underline-offset-2">Run it again with the current permissions</button>
+              </div>
+            )}
             <p className="text-[15px] leading-relaxed"><RichText text={reply.raw.message} metrics={metrics} /></p>
             {reply.raw.statements.map((statement, index) => {
               const key = `${turn.id}-${index}`;

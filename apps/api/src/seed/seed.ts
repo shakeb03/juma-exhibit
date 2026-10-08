@@ -163,13 +163,14 @@ export async function seedAgency(db: Queryable, agencyId: string, fixturesDir: s
 
   // Starting canvas: nodes placed but not connected. Connecting is the user's decision.
   const nodes: CanvasNode[] = [
+    // A compact two-by-two grid on the left and the chat on the right, so the canvas reads at a glance.
     ...manifest.clients.map((client, index) =>
-      canvasNodeSchema.parse({ id: `client-${client.slug}`, type: "client", position: { x: 80, y: 60 + index * 200 }, clientId: clientIdBySlug.get(client.slug) }),
+      canvasNodeSchema.parse({ id: `client-${client.slug}`, type: "client", position: { x: 20 + (index % 2) * 300, y: 20 + Math.floor(index / 2) * 250 }, clientId: clientIdBySlug.get(client.slug) }),
     ),
     ...manifest.newClientBriefs.map((brief) =>
-      canvasNodeSchema.parse({ id: `brief-${brief.slug}`, type: "brief", position: { x: 80, y: 700 }, sourceId: sourceIdByPath.get(brief.path), title: brief.name }),
+      canvasNodeSchema.parse({ id: `brief-${brief.slug}`, type: "brief", position: { x: 320, y: 270 }, sourceId: sourceIdByPath.get(brief.path), title: brief.name }),
     ),
-    canvasNodeSchema.parse({ id: "chat-1", type: "chat", position: { x: 560, y: 260 }, title: "Chat" }),
+    canvasNodeSchema.parse({ id: "chat-1", type: "chat", position: { x: 700, y: 130 }, title: "Chat" }),
   ];
   const edges: CanvasEdge[] = [];
   edges.forEach((edge) => canvasEdgeSchema.parse(edge));

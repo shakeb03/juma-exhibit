@@ -8,7 +8,8 @@ import { routingVersion, type RoutingTable } from "../ai/routing.js";
 import { failTurn } from "../agent/persist.js";
 import { ModelError } from "../ai/types.js";
 import type { RunContext } from "./context.js";
-import { BudgetError, CancelledError, LeaseLostError, ValidationFailure, isTransientDbError } from "./errors.js";
+import { ContextLimitError, CanvasError } from "../permissions/types.js";
+import { BudgetError, CancelledError, ContextChangedError, LeaseLostError, ValidationFailure, isTransientDbError } from "./errors.js";
 import { DEFAULT_LIMITS, ModelCaller } from "./modelCaller.js";
 import { ExecutionRecorder } from "./recorder.js";
 
@@ -36,6 +37,11 @@ export function failureMessage(error: unknown): { code: string; message: string 
   if (error instanceof ValidationFailure) {
     return { code: "validation_failed", message: "The AI's answer did not pass the evidence checks, so nothing was saved. Your existing work is unchanged. You can try again or rephrase." };
   }
+  if (error instanceof ContextChangedError) {
+    return { code: "context_changed", message: "Sharing settings or canvas content changed while this ran, so nothing was saved. Run it again to use the current permissions." };
+  }
+  if (error instanceof ContextLimitError) return { code: error.code, message: `${error.message} Shorten or remove some text on the canvas, then run it again.` };
+  if (error instanceof CanvasError) return { code: error.code, message: `${error.message} Nothing was saved.` };
   if (error instanceof BudgetError) return { code: error.code, message: `${error.message} Your existing work is unchanged.` };
   if (error instanceof ModelError) {
     return { code: "model_error", message: "The AI provider failed after several attempts, so nothing was saved. Your existing work is unchanged. You can try again." };

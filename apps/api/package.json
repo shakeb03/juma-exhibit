@@ -11,7 +11,8 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "smoke": "tsx --env-file=.env src/scripts/liveSmoke.ts"
+    "smoke": "tsx --env-file=.env src/scripts/liveSmoke.ts",
+    "smoke:canvas": "tsx --env-file=.env src/scripts/liveCanvasSmoke.ts"
   },
   "devDependencies": {
     "tsup": "^8.5.1",

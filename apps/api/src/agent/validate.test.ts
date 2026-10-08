@@ -85,15 +85,18 @@ describe("validateReply", () => {
     expect(validateReply(hypothesis, context()).problems).toEqual([]);
   });
 
-  it("keeps causal wording out of messages, notes, and paragraphs but allows it in hypotheses", () => {
-    const causalMessage = { ...goodReply, message: "The gap comes from click volume." };
+  it("keeps causal wording out of text that states data, but allows it in hypotheses and in permission explanations", () => {
+    const causalMessage = { ...goodReply, message: "The gap in {{metric:RL-PIN-0901:ctr}} comes from click volume." };
     expect(validateReply(causalMessage, context()).problems.some((p) => p.path === "reply.message")).toBe(true);
-    const causalNote: AgentReply = { ...goodReply, statements: [goodReply.statements[0]!, { type: "note", text: "Summit Weekend drove more clicks." }] };
+    const causalNote: AgentReply = { ...goodReply, statements: [goodReply.statements[0]!, { type: "note", text: "Summit Weekend drove {{metric:RL-PIN-0901:ctr}} more clicks." }] };
     expect(validateReply(causalNote, context()).problems.some((p) => /without causes/.test(p.message))).toBe(true);
     const para = draft([{ type: "paragraph", text: "The photo caused the lift." }, obs(), hyp(), rec()]);
     expect(validateDraft(para, "performance_report", context()).problems.some((p) => /without causes/.test(p.message))).toBe(true);
     const fine: AgentReply = { ...goodReply, statements: [goodReply.statements[0]!, { type: "hypothesis", text: "The gap may come from the photo, because it shows real conditions." }] };
     expect(validateReply(fine, context()).problems).toEqual([]);
+    // A refusal explains a permission, not a result.
+    const refusal: AgentReply = { message: "I cannot use that client because it has not approved sharing.", statements: [{ type: "note", text: "That client is excluded because sharing is not approved." }] };
+    expect(validateReply(refusal, context()).problems).toEqual([]);
   });
 
   it("rejects an answer that did analysis but states nothing, unless an artifact carries the content", () => {

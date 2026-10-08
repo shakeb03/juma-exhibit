@@ -42,6 +42,10 @@ function toRaw(event: ExecutionEventView): Raw | null {
   if (event.kind === "artifact") return { label: event.name === "Saved artifact version" ? "Saving the artifact" : "Saving the answer" };
   switch (event.name) {
     case "Loaded client context": return { label: "Loading client context" };
+    case "Resolved what this chat may see": {
+      const excluded = typeof payload.excluded === "number" ? payload.excluded : 0;
+      return { label: "Applying permissions", detail: excluded > 0 ? `${excluded} excluded` : undefined };
+    }
     case "Writing the answer": return { label: "Writing the answer" };
     case "Repairing the answer after failed checks": return { label: "Fixing the answer after checks" };
     case "Fallback model used": return { label: "Switched to a backup model" };
@@ -85,6 +89,12 @@ export function latestClaims(events: ExecutionEventView[]): { text: string; pass
 }
 
 export function countSources(events: ExecutionEventView[]): number {
+  // A canvas run reads what its connected nodes allow: approved clients plus text added to the canvas.
+  const resolved = events.find((e) => e.name === "Resolved what this chat may see");
+  if (resolved) {
+    const p = (resolved.payload ?? {}) as { clients?: { performance: boolean; creative: boolean }[]; explicit?: number };
+    return (p.clients ?? []).filter((c) => c.performance || c.creative).length + (p.explicit ?? 0);
+  }
   return events.filter((e) => e.kind === "tool_call" && ["retrieve_campaigns", "read_source", "read_creative_references", "read_client_context", "discover_sources"].includes(e.name)).length;
 }
 

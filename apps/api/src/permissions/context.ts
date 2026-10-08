@@ -214,8 +214,10 @@ export async function buildIntelligenceContext(db: Queryable, options: BuildOpti
     explicit.push({ ref: `canvas:${node.type}:${node.id}`, kind: node.type as "brief" | "reference", title: source.name, text: source.text });
     usedSources.push({ id: source.id, version: source.version });
   }
-  for (const node of connected.filter((n) => n.type === "idea" && n.text)) {
-    explicit.push({ ref: `canvas:idea:${node.id}`, kind: "idea", title: node.title ?? "Idea", text: node.text! });
+  // Ideas, and any brief or reference typed or pasted straight onto the canvas, are explicit context.
+  for (const node of connected.filter((n) => n.text && (n.type === "idea" || ((n.type === "brief" || n.type === "reference") && !n.sourceId)))) {
+    const kind = node.type as "idea" | "brief" | "reference";
+    explicit.push({ ref: `canvas:${kind}:${node.id}`, kind, title: node.title ?? (kind === "idea" ? "Idea" : kind === "brief" ? "New-client brief" : "Reference"), text: node.text! });
   }
 
   const totalChars = explicit.reduce((sum, item) => sum + item.text.length, 0);

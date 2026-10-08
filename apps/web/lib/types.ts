@@ -27,6 +27,8 @@ export interface ReplyView {
   raw?: AgentReply;
   claims?: { verified: number; total: number } | null;
   evidence?: Record<string, Metric>;
+  /** Reasons this result no longer matches the current permissions or canvas text. Empty when it is current. */
+  stale?: string[];
 }
 
 export type TurnStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
@@ -194,4 +196,50 @@ export interface RepoFile {
   language: string;
   content: string;
   size: number;
+}
+
+export interface CanvasNodeData {
+  id: string;
+  type: "client" | "brief" | "reference" | "idea" | "chat";
+  position: { x: number; y: number };
+  clientId?: string;
+  sourceId?: string;
+  text?: string;
+  title?: string;
+}
+
+export interface CanvasEdgeData {
+  id: string;
+  source: string;
+  target: string;
+  label?: string;
+}
+
+export interface CanvasState {
+  canvasId: string;
+  revision: number;
+  nodes: CanvasNodeData[];
+  edges: CanvasEdgeData[];
+  updatedAt: string;
+}
+
+export interface PassportEntry {
+  nodeId: string;
+  type: "client" | "brief" | "reference" | "idea";
+  title: string;
+  status: "approved" | "partial" | "restricted" | "explicit";
+  included: string[];
+  excluded: string[];
+  reasons: string[];
+  fieldsShared: number;
+}
+
+export interface PassportView {
+  revision: number;
+  passport: { chatNodeId: string; entries: PassportEntry[]; neverShared: string[]; note: string };
+  exclusions: { subject: string; category: string; reason: string }[];
+}
+
+export interface CanvasConversationView extends ConversationView {
+  canvasRevision: number;
 }

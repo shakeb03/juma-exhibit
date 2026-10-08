@@ -27,6 +27,8 @@ export interface TurnCommit {
   artifact?: ArtifactCommit;
   evidence?: { metrics: Record<string, RegistryMetric>; scopes: RegistryScope[]; claims: Claims; warnings: unknown[] };
   sourceFingerprint: string;
+  /** Cross-client results record the permissions they were built on, so a later change can invalidate them. */
+  permissionFingerprint?: string;
 }
 
 export interface CommittedArtifact {
@@ -70,13 +72,13 @@ export async function commitTurn(db: Database, commit: TurnCommit): Promise<Comm
       }
       const evidence = commit.evidence ?? { metrics: {}, scopes: [], claims: { verified: 0, total: 0 }, warnings: [] };
       const inserted = await tx.query(
-        `insert into artifact_versions (artifact_id, version, blocks, evidence, checks, cause_kind, cause_turn_id, base_version_id, source_fingerprint)
-         values ($1, $2, $3, $4, $5, 'turn', $6, $7, $8) returning id`,
+        `insert into artifact_versions (artifact_id, version, blocks, evidence, checks, cause_kind, cause_turn_id, base_version_id, source_fingerprint, permission_fingerprint)
+         values ($1, $2, $3, $4, $5, 'turn', $6, $7, $8, $9) returning id`,
         [
           artifactId, version, JSON.stringify(draft.blocks),
           JSON.stringify({ metrics: evidence.metrics, scopes: evidence.scopes }),
           JSON.stringify({ claims: evidence.claims, warnings: evidence.warnings }),
-          commit.turnId, draft.baseVersionId ?? null, commit.sourceFingerprint,
+          commit.turnId, draft.baseVersionId ?? null, commit.sourceFingerprint, commit.permissionFingerprint ?? null,
         ],
       );
       await tx.query("update artifacts set current_version_id = $2 where id = $1", [artifactId, inserted.rows[0].id]);

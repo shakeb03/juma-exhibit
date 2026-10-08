@@ -28,6 +28,8 @@ pnpm migrate
 pnpm dev     # API on :8080, web on :3000
 ```
 
+Live checks against real models (spend a few cents each): `pnpm --filter @exhibit/api smoke` for a client conversation, `pnpm --filter @exhibit/api smoke:canvas` for cross-client chat. Integration tests (`pnpm --filter @exhibit/api test:integration`) use the real database with a scripted model; stop any dev API first, because its worker claims queued runs.
+
 Checks (run locally before pushing; there is no CI): `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 
 Deployment: Vercel (root `apps/web`) and Railway (repo root, see `railway.json`) both deploy directly from GitHub pushes.

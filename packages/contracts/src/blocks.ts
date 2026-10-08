@@ -10,6 +10,9 @@ import { metricNameSchema } from "./campaign.js";
 const text = z.string().trim().min(1).max(4000);
 // Models often omit empty lists; a missing list simply means none.
 const ids = z.array(z.string().min(1)).max(40).default([]);
+const metricIdList = z.array(z.string().min(1)).max(40).default([]).describe("Ids of the calculated metrics this rests on, exactly as listed. Required for observations unless the text has {{placeholders}}.");
+const basedOnList = z.array(z.string().min(1)).max(40).default([]).describe("Keys (or existing ids) of the observation blocks this rests on.");
+const refList = z.array(z.string().min(1)).max(40).default([]).describe("References to retrieved campaigns or documents, exactly as listed. May be empty.");
 
 export const artifactKindSchema = z.enum([
   "performance_report",
@@ -17,6 +20,7 @@ export const artifactKindSchema = z.enum([
   "client_summary",
   "campaign_concepts",
   "experiment_plan",
+  "category_insight",
 ]);
 export type ArtifactKind = z.infer<typeof artifactKindSchema>;
 
@@ -33,26 +37,26 @@ const metricTable = z.object({
   metrics: z.array(metricNameSchema).min(1).max(12),
 });
 // What the data shows. Must cite metrics or sources and may not state causes.
-const observation = z.object({ type: z.literal("observation"), text, metricIds: ids, sourceRefs: ids });
+const observation = z.object({ type: z.literal("observation"), text: text.describe("What the data shows. Write every performance number as a {{metric-id}} placeholder. No causes."), metricIds: metricIdList, sourceRefs: refList });
 // A possible explanation. Always untested.
-const hypothesis = z.object({ type: z.literal("hypothesis"), text, basedOn: ids, sourceRefs: ids });
+const hypothesis = z.object({ type: z.literal("hypothesis"), text: text.describe("A possible explanation, stated as untested."), basedOn: basedOnList, sourceRefs: refList });
 // A proposed action, with its reasoning, how to measure it, and its limits.
 const recommendation = z.object({
   type: z.literal("recommendation"),
-  text,
-  reasoning: text,
-  basedOn: ids,
-  measurement: text,
-  limitation: text,
+  text: text.describe("The action to take."),
+  reasoning: text.describe("Why, resting on the observations."),
+  basedOn: basedOnList,
+  measurement: text.describe("How to measure whether it worked."),
+  limitation: text.describe("What limits this recommendation."),
 });
 const experiment = z.object({
   type: z.literal("experiment"),
-  title: z.string().trim().min(1).max(200),
-  hypothesis: text,
-  design: text,
-  measurement: text,
-  limitation: text,
-  basedOn: ids,
+  title: z.string().trim().min(1).max(200).describe("The concept, in a short phrase."),
+  hypothesis: text.describe("The idea this test checks. Untested."),
+  design: text.describe("How to run the test, including how it is adapted for the new client."),
+  measurement: text.describe("What to measure and compare."),
+  limitation: text.describe("What limits what the test can show."),
+  basedOn: basedOnList,
 });
 const limitation = z.object({ type: z.literal("limitation"), text });
 

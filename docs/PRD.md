@@ -165,6 +165,8 @@ Example question:
 | Demo file panel | Makes scenario files easy to find and attach. | Client briefs, campaign CSVs, creative examples, challenge files. |
 | Run overview | Shows what the system is doing and whether it succeeded. | Current step, elapsed time, sources, checks, output status. |
 | Geek panel | Shows what happens under the hood for every turn. | Section 9. |
+| X-ray | One switch overlays every answer and artifact block with where it came from: metric IDs, whether values were calculated or written by a model, the checks, and which models gathered and wrote it. | Toggle in the workspace header. |
+| Data passport | Shows exactly what flows through each canvas connection and what does not, and why, with "0 fields shared" for a restricted client. | Derived from the same context the model receives. |
 | Native code view | Browse the deployed source code without leaving the app. | Opened from the geek panel; section 9. |
 
 ## 7. How intelligence should behave

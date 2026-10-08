@@ -105,9 +105,14 @@ class Checker {
     }
   }
 
-  /** Narrative text that is not a labelled hypothesis must not state causes. */
-  noCause(path: string, text: string): void {
-    if (CAUSAL.test(text)) {
+  /**
+   * Narrative text that is not a labelled hypothesis must not state causes. Only text that states data is held to
+   * this: a refusal such as "I cannot use that client because it has not approved sharing" explains a permission,
+   * not a performance result.
+   */
+  noCause(path: string, text: string, strict = false): void {
+    const statesData = strict || extractPlaceholders(text).length > 0 || /\d/.test(text);
+    if (statesData && CAUSAL.test(text)) {
       this.problems.push({ path, message: "State what the data shows without causes here (no \"drove\", \"because\", \"comes from\"...). Put any explanation in a hypothesis." });
     }
   }
@@ -172,14 +177,15 @@ export interface DraftResult extends ReplyResult {
   blocks: Block[];
 }
 
-const REQUIREMENTS: Record<ArtifactKind, { need: Block["type"][][]; description: string }> = {
+const REQUIREMENTS: Record<ArtifactKind, { need: Block["type"][][]; description: string; minCount?: Partial<Record<Block["type"], number>> }> = {
   performance_report: {
     need: [["observation"], ["hypothesis"], ["recommendation", "experiment"]],
     description: "at least one observation, one hypothesis, and one recommendation or experiment",
   },
   client_summary: { need: [["observation"]], description: "at least one observation" },
   campaign_brief: { need: [["paragraph", "recommendation", "experiment"]], description: "some content beyond headings" },
-  campaign_concepts: { need: [["experiment"]], description: "at least one experiment" },
+  campaign_concepts: { need: [["experiment"]], description: "three experiments, each a concept to test", minCount: { experiment: 3 } },
+  category_insight: { need: [["observation"], ["hypothesis"]], description: "at least one observation and one hypothesis" },
   experiment_plan: { need: [["experiment"]], description: "at least one experiment" },
 };
 
@@ -220,7 +226,8 @@ export function validateDraft(draft: ArtifactDraft, kind: ArtifactKind, ctx: Val
         break;
       case "paragraph":
         check.text(path, block.text, true);
-        check.noCause(path, block.text);
+        // A paragraph in a deliverable states findings, so it is held to the rule whether or not it shows a number.
+        check.noCause(path, block.text, true);
         break;
       case "observation":
         check.observation(path, block.text, block.metricIds, block.sourceRefs);
@@ -266,7 +273,10 @@ export function validateDraft(draft: ArtifactDraft, kind: ArtifactKind, ctx: Val
 
   const types = new Set(blocks.map((b) => b.type));
   const requirement = REQUIREMENTS[kind];
-  if (!requirement.need.every((anyOf) => anyOf.some((t) => types.has(t)))) {
+  const countOf = (type: Block["type"]) => blocks.filter((b) => b.type === type).length;
+  const missingType = !requirement.need.every((anyOf) => anyOf.some((t) => types.has(t)));
+  const shortOnCount = Object.entries(requirement.minCount ?? {}).some(([type, min]) => countOf(type as Block["type"]) < (min as number));
+  if (missingType || shortOnCount) {
     check.problems.push({ path: "artifact", message: `A ${kind.replace(/_/g, " ")} needs ${requirement.description}.` });
   }
 

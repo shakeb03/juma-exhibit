@@ -98,11 +98,12 @@ Choose a SQL migration runner such as `node-pg-migrate`, use its migration ledge
 
 | Route | Purpose |
 | --- | --- |
-| `/` | Client cards and workspace choice |
+| `/` | Client cards, guided scenarios, and workspace choice |
 | `/clients/:id` | Client context, conversation, and artifact |
-| `/intelligence/:canvasId` | Node canvas, chat nodes, and cross-client artifacts |
-| `/geek/:executionId` | Geek panel opened at one execution; also reachable as a panel from any view |
-| `/geek/:executionId/code` | Native code view inside the geek panel |
+| `/intelligence` | The one saved canvas: nodes, connections, the data passport, chat nodes, and cross-client artifacts |
+| `/api/meta` | Frontend commit, shown beside the backend commit in the code browser |
+
+The geek panel and the code browser are layers above the workspace, not routes, so opening and closing them never loses the conversation, canvas, or execution beneath. The panel opens at the turn being viewed and steps between turns.
 
 Use the agreed 70/30 desktop layout. Within the main 70%, chat and artifact are simultaneously visible and scroll independently, with a fixed-height flex chat pane and a non-scrolling composer. The sidebar holds demo files above and run status below, plus the **For geeks** entry. Preserve the current conversation, canvas, artifact version, and scroll position when entering and leaving the geek panel.
 
@@ -276,7 +277,7 @@ Context resolution for a chat turn:
 6. Recheck selected permissions and source fingerprints before analysis, before commit, and before serving answers, artifacts, traces, approval, or PDFs.
 7. With no creative references available, visual or storytelling questions get a request for the missing evidence. Generic experiment concepts can still use approved performance findings.
 
-The chat answers naturally and can produce artifacts (category insight, campaign concepts, experiment plan) on request. Each concept or experiment includes the idea, supporting observations, adaptation for the new client, and suggested measurement. Hypotheses are labelled untested. Source references must resolve to approved records. Permission checks are enforced in code, never delegated to the model: one module builds the only context a chat node's prompts and tools receive, and every data query repeats the sharing check in SQL as a second barrier. Canvas references to a client's own files are refused, since those are reachable only through that client's approvals. Store source and permission versions so changed approvals or inputs invalidate old results.
+The chat answers naturally and can produce artifacts (category insight, campaign concepts, experiment plan) on request. A chat turn is tied to the exact canvas revision saved when it was sent. The model receives the permission filter's output and nothing else: it has no tools that can read client data. Normalized patterns are registered as citable metrics (`metric:<client>:<dimension>:<value>[:<channel>]:<metric>`) so numbers, tables, and the evidence drawer work exactly as they do for single-client work. Permissions are resolved when the run starts and rechecked before the result is saved; if they changed in between, nothing is saved and the user is told. A saved result stores the permission and source fingerprints it was built on, and is marked out of date whenever it is served after either has changed (the permission version only moves forward, so restoring an approval does not rescue an old result). The data passport describes each connection from the same context object the model gets, so it cannot promise something the system does not do. Each concept or experiment includes the idea, supporting observations, adaptation for the new client, and suggested measurement. Hypotheses are labelled untested. Source references must resolve to approved records. Permission checks are enforced in code, never delegated to the model: one module builds the only context a chat node's prompts and tools receive, and every data query repeats the sharing check in SQL as a second barrier. Canvas references to a client's own files are refused, since those are reachable only through that client's approvals. Store source and permission versions so changed approvals or inputs invalidate old results.
 
 ## 13. Model routing
 
@@ -286,7 +287,7 @@ Use a small server-side configuration mapping task names to primary and fallback
 | --- | --- | --- |
 | Request interpretation and tool use | A configured GPT or Claude model | Tool calling |
 | Chat reply and report explanation | A configured Claude or GPT model | Structured text output |
-| Cross-client reasoning | A configured reasoning-capable model | Evidence-based comparison |
+| Cross-client reasoning | A configured reasoning-capable model (GPT by default, a different family from the single-client tasks) | Evidence-based comparison |
 | Block edit proposals | A configured fast model | Structured single-block output |
 | Creative reference inspection | A configured vision model | Image input |
 | Campaign concepts | A configured creative-writing model | Structured concepts and experiment briefs |
@@ -294,7 +295,7 @@ Use a small server-side configuration mapping task names to primary and fallback
 
 Multiple tasks may share a model where that works well. Use more than one model family in the demo after evaluation, without calling several models redundantly for every step. "ChatGPT" here means an available OpenAI GPT model accessed through OpenRouter, not the ChatGPT application.
 
-Fallbacks are attempted by the application, one recorded attempt at a time, not by the gateway. Live testing showed that sending OpenRouter a fallback list (`models`), or requiring provider parameter support (`provider.require_parameters`) together with `tool_choice`, silently rerouted requests away from Claude to another family even when Claude was healthy. A transient error is retried once on the same model, then the next candidate is used; errors specific to a model or provider (HTTP 400 and 404) move to the next candidate immediately; account-level errors (401, 402, 403) fail the call. All of it shares one attempt limit, and a model that failed is not retried on later calls in the same run. Forced tool choice is not used for the answer step because some models reject it; a missing `finish` call is handled by the single repair attempt.
+Fallbacks are attempted by the application, one recorded attempt at a time, not by the gateway. Live testing showed that sending OpenRouter a fallback list (`models`), or requiring provider parameter support (`provider.require_parameters`) together with `tool_choice`, silently rerouted requests away from Claude to another family even when Claude was healthy. A transient error is retried once on the same model, then the next candidate is used; errors specific to a model or provider (HTTP 400 and 404) move to the next candidate immediately; account-level errors (401, 402, 403) fail the call. All of it shares one attempt limit, and a model that failed is not retried on later calls in the same run. The `finish` tool's parameters are generated from the same Zod schema that validates the answer, because a hand-written schema that declared only some block fields made one model family fill in only those. Forced tool choice is not used for the answer step because some models reject it; a missing `finish` call is handled by the single repair attempt.
 
 Verify tool, image, and structured-output support for each selected model and provider combination. Prefer compatible routes and reject unsupported ones. Fall back only to an explicitly configured compatible model. Record the requested model, returned model, and any upstream provider information supplied; show unavailable fields honestly.
 

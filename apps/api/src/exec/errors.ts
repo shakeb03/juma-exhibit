@@ -41,3 +41,11 @@ export function isTransientDbError(error: unknown): boolean {
   const code = (error as { code?: string })?.code ?? "";
   return /^(08|53|57P0[1-3])/.test(code) || ["ECONNRESET", "ETIMEDOUT", "ECONNREFUSED", "EPIPE"].includes(code);
 }
+
+/** Sharing or source content changed while a cross-client run was in progress, so its result must not be saved. */
+export class ContextChangedError extends Error {
+  constructor(public readonly reasons: string[]) {
+    super(`The approved context changed during the run: ${reasons.join(" ")}`);
+    this.name = "ContextChangedError";
+  }
+}

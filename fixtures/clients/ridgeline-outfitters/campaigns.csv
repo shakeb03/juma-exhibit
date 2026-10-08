@@ -1,0 +1,8 @@
+campaign_id,campaign_name,channel,period,start_date,end_date,currency,spend,impressions,clicks,conversions,revenue,attribution_window,creative_ref_id
+RL-PIN-0801,Trail Season Launch,Pinterest,2026-08,2026-08-03,2026-08-16,USD,11400.00,1200000,28800,576,67968.00,7d_click,RL-C01
+RL-PIN-0802,Layering Basics,Pinterest,2026-08,2026-08-17,2026-08-30,USD,9800.00,1050000,11550,243,23328.00,7d_click,RL-C02
+RL-PIN-0901,Summit Weekend,Pinterest,2026-09,2026-09-07,2026-09-21,USD,12600.00,1300000,33800,642,79608.00,7d_click,RL-C03
+RL-PIN-0902,Fall Gear Guide,Pinterest,2026-09,2026-09-14,2026-09-28,USD,8700.00,900000,10800,238,24038.00,7d_click,RL-C04
+RL-MET-0801,Basecamp Stories,Meta,2026-08,2026-08-03,2026-08-30,USD,14000.00,2000000,28000,448,49280.00,7d_click,RL-C05
+RL-MET-0901,Ridge Run Film,Meta,2026-09,2026-09-01,2026-09-30,USD,15500.00,2200000,33000,495,55440.00,7d_click,RL-C06
+RL-GOO-0901,Brand Search,Google,2026-09,2026-09-01,2026-09-30,USD,6200.00,300000,19500,741,96330.00,7d_click,

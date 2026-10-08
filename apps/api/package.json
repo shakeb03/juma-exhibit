@@ -1,0 +1,24 @@
+{
+  "name": "@exhibit/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file=.env src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "migrate": "tsx --env-file=.env src/migrate.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.15"
+  },
+  "dependencies": {
+    "@exhibit/contracts": "workspace:*",
+    "@exhibit/database": "workspace:*",
+    "fastify": "^5.12.5",
+    "zod": "^4.6.5"
+  }
+}

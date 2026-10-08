@@ -1,0 +1,8 @@
+campaign_id,campaign_name,channel,period,start_date,end_date,currency,spend,impressions,clicks,conversions,revenue,attribution_window,creative_ref_id
+MF-PIN-0801,Meet the Mill,Pinterest,2026-08,2026-08-03,2026-08-16,USD,2900.00,420000,5460,251,22088.00,7d_click,MF-C01
+MF-PIN-0802,End of Summer Sale,Pinterest,2026-08,2026-08-17,2026-08-30,USD,2600.00,380000,6080,109,7848.00,7d_click,MF-C02
+MF-PIN-0901,Worn For Years,Pinterest,2026-09,2026-09-07,2026-09-21,USD,3100.00,450000,5400,265,24380.00,7d_click,MF-C03
+MF-PIN-0902,Fall Capsule,Pinterest,2026-09,2026-09-14,2026-09-28,USD,2800.00,400000,5600,129,10965.00,7d_click,MF-C04
+MF-MET-0801,Letters From the Workshop,Meta,2026-08,2026-08-03,2026-08-30,USD,4200.00,700000,7000,273,24570.00,7d_click_1d_view,MF-C05
+MF-MET-0901,Founder Letter,Meta,2026-09,2026-09-01,2026-09-30,USD,4500.00,760000,8360,368,34592.00,7d_click_1d_view,MF-C06
+MF-GOO-0901,Brand Search,Google,2026-09,2026-09-01,2026-09-30,USD,2300.00,120000,6240,250,23750.00,7d_click,

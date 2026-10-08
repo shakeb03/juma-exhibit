@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.next/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# Secrets: only placeholder .env.example files are committed
+.env
+.env.*
+!.env.example
+
+.DS_Store

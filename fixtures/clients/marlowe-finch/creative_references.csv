@@ -1,0 +1,7 @@
+creative_ref_id,campaign_id,title,description,visual_style,storytelling_approach,format,asset_note
+MF-C01,MF-PIN-0801,Meet the mill,"Plain studio portrait of the mill owner holding a bolt of cloth, soft light, a three-sentence story about why the mill still weaves on old looms.",studio-plain,founder-letter,static,Text description only; no image file supplied.
+MF-C02,MF-PIN-0802,Sale announcement grid,Grid of six shirts on a white background with a bold 25 percent off banner.,product-grid,discount-announcement,static,Text description only; no image file supplied.
+MF-C03,MF-PIN-0901,Worn for years,Plain studio photo of a well-worn oxford shirt beside a customer's handwritten note describing ten years of wear.,studio-plain,customer-story,static,Text description only; no image file supplied.
+MF-C04,MF-PIN-0902,Fall capsule,Studio photo of five autumn pieces arranged on a stool with a short caption listing materials.,studio-plain,product-features,static,Text description only; no image file supplied.
+MF-C05,MF-MET-0801,Letters from the workshop,"Carousel of workshop photos, each with a short caption from a different tailor describing one garment they made.",studio-plain,customer-story,carousel,Text description only; no image file supplied.
+MF-C06,MF-MET-0901,Founder letter,Single image of a typed letter from the founder to customers explaining how a shirt pattern was revised after feedback.,studio-plain,founder-letter,static,Text description only; no image file supplied.

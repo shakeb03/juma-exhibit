@@ -1,0 +1,4 @@
+campaign_id,campaign_name,channel,period,start_date,end_date,currency,spend,impressions,clicks,conversions,revenue,attribution_window,creative_ref_id
+VS-MET-0801,Drop 04 Countdown,Meta,2026-08,2026-08-03,2026-08-30,USD,21000.00,900000,27900,614,85960.00,7d_click,VS-C01
+VS-MET-0901,Drop 05 Countdown,Meta,2026-09,2026-09-01,2026-09-30,USD,24000.00,1000000,34000,816,122400.00,7d_click,VS-C02
+VS-PIN-0901,Lookbook Pins,Pinterest,2026-09,2026-09-07,2026-09-28,USD,3500.00,500000,7000,140,18200.00,7d_click,VS-C03

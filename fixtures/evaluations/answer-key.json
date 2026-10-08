@@ -1,0 +1,758 @@
+{
+  "generatedBy": "fixtures/scripts/generate.mjs",
+  "note": "Synthetic data. Independent of application code.",
+  "clients": {
+    "ridgeline-outfitters": {
+      "name": "Ridgeline Outfitters",
+      "currency": "USD",
+      "byCampaign": {
+        "RL-PIN-0801": {
+          "spend": 11400,
+          "impressions": 1200000,
+          "clicks": 28800,
+          "conversions": 576,
+          "revenue": 67968,
+          "ctr": 0.024,
+          "conversionRate": 0.02,
+          "cpc": 0.395833,
+          "costPerConversion": 19.791667,
+          "roas": 5.962105,
+          "cpm": 9.5,
+          "clicksPer1kImpressions": 24,
+          "conversionsPer1kImpressions": 0.48
+        },
+        "RL-PIN-0802": {
+          "spend": 9800,
+          "impressions": 1050000,
+          "clicks": 11550,
+          "conversions": 243,
+          "revenue": 23328,
+          "ctr": 0.011,
+          "conversionRate": 0.021039,
+          "cpc": 0.848485,
+          "costPerConversion": 40.329218,
+          "roas": 2.380408,
+          "cpm": 9.333333,
+          "clicksPer1kImpressions": 11,
+          "conversionsPer1kImpressions": 0.231429
+        },
+        "RL-PIN-0901": {
+          "spend": 12600,
+          "impressions": 1300000,
+          "clicks": 33800,
+          "conversions": 642,
+          "revenue": 79608,
+          "ctr": 0.026,
+          "conversionRate": 0.018994,
+          "cpc": 0.372781,
+          "costPerConversion": 19.626168,
+          "roas": 6.318095,
+          "cpm": 9.692308,
+          "clicksPer1kImpressions": 26,
+          "conversionsPer1kImpressions": 0.493846
+        },
+        "RL-PIN-0902": {
+          "spend": 8700,
+          "impressions": 900000,
+          "clicks": 10800,
+          "conversions": 238,
+          "revenue": 24038,
+          "ctr": 0.012,
+          "conversionRate": 0.022037,
+          "cpc": 0.805556,
+          "costPerConversion": 36.554622,
+          "roas": 2.762989,
+          "cpm": 9.666667,
+          "clicksPer1kImpressions": 12,
+          "conversionsPer1kImpressions": 0.264444
+        },
+        "RL-MET-0801": {
+          "spend": 14000,
+          "impressions": 2000000,
+          "clicks": 28000,
+          "conversions": 448,
+          "revenue": 49280,
+          "ctr": 0.014,
+          "conversionRate": 0.016,
+          "cpc": 0.5,
+          "costPerConversion": 31.25,
+          "roas": 3.52,
+          "cpm": 7,
+          "clicksPer1kImpressions": 14,
+          "conversionsPer1kImpressions": 0.224
+        },
+        "RL-MET-0901": {
+          "spend": 15500,
+          "impressions": 2200000,
+          "clicks": 33000,
+          "conversions": 495,
+          "revenue": 55440,
+          "ctr": 0.015,
+          "conversionRate": 0.015,
+          "cpc": 0.469697,
+          "costPerConversion": 31.313131,
+          "roas": 3.576774,
+          "cpm": 7.045455,
+          "clicksPer1kImpressions": 15,
+          "conversionsPer1kImpressions": 0.225
+        },
+        "RL-GOO-0901": {
+          "spend": 6200,
+          "impressions": 300000,
+          "clicks": 19500,
+          "conversions": 741,
+          "revenue": 96330,
+          "ctr": 0.065,
+          "conversionRate": 0.038,
+          "cpc": 0.317949,
+          "costPerConversion": 8.367072,
+          "roas": 15.537097,
+          "cpm": 20.666667,
+          "clicksPer1kImpressions": 65,
+          "conversionsPer1kImpressions": 2.47
+        }
+      },
+      "byChannelPeriod": {
+        "Pinterest|2026-08": {
+          "spend": 21200,
+          "impressions": 2250000,
+          "clicks": 40350,
+          "conversions": 819,
+          "revenue": 91296,
+          "ctr": 0.017933,
+          "conversionRate": 0.020297,
+          "cpc": 0.525403,
+          "costPerConversion": 25.885226,
+          "roas": 4.306415,
+          "cpm": 9.422222,
+          "clicksPer1kImpressions": 17.933333,
+          "conversionsPer1kImpressions": 0.364
+        },
+        "Pinterest|2026-09": {
+          "spend": 21300,
+          "impressions": 2200000,
+          "clicks": 44600,
+          "conversions": 880,
+          "revenue": 103646,
+          "ctr": 0.020273,
+          "conversionRate": 0.019731,
+          "cpc": 0.477578,
+          "costPerConversion": 24.204545,
+          "roas": 4.866009,
+          "cpm": 9.681818,
+          "clicksPer1kImpressions": 20.272727,
+          "conversionsPer1kImpressions": 0.4
+        },
+        "Meta|2026-08": {
+          "spend": 14000,
+          "impressions": 2000000,
+          "clicks": 28000,
+          "conversions": 448,
+          "revenue": 49280,
+          "ctr": 0.014,
+          "conversionRate": 0.016,
+          "cpc": 0.5,
+          "costPerConversion": 31.25,
+          "roas": 3.52,
+          "cpm": 7,
+          "clicksPer1kImpressions": 14,
+          "conversionsPer1kImpressions": 0.224
+        },
+        "Meta|2026-09": {
+          "spend": 15500,
+          "impressions": 2200000,
+          "clicks": 33000,
+          "conversions": 495,
+          "revenue": 55440,
+          "ctr": 0.015,
+          "conversionRate": 0.015,
+          "cpc": 0.469697,
+          "costPerConversion": 31.313131,
+          "roas": 3.576774,
+          "cpm": 7.045455,
+          "clicksPer1kImpressions": 15,
+          "conversionsPer1kImpressions": 0.225
+        },
+        "Google|2026-09": {
+          "spend": 6200,
+          "impressions": 300000,
+          "clicks": 19500,
+          "conversions": 741,
+          "revenue": 96330,
+          "ctr": 0.065,
+          "conversionRate": 0.038,
+          "cpc": 0.317949,
+          "costPerConversion": 8.367072,
+          "roas": 15.537097,
+          "cpm": 20.666667,
+          "clicksPer1kImpressions": 65,
+          "conversionsPer1kImpressions": 2.47
+        }
+      },
+      "byVisualStyle": {
+        "bold-on-location": {
+          "campaignIds": [
+            "RL-PIN-0801",
+            "RL-PIN-0901",
+            "RL-MET-0801",
+            "RL-MET-0901"
+          ],
+          "spend": 53500,
+          "impressions": 6700000,
+          "clicks": 123600,
+          "conversions": 2161,
+          "revenue": 252296,
+          "ctr": 0.018448,
+          "conversionRate": 0.017484,
+          "cpc": 0.432848,
+          "costPerConversion": 24.757057,
+          "roas": 4.715813,
+          "cpm": 7.985075,
+          "clicksPer1kImpressions": 18.447761,
+          "conversionsPer1kImpressions": 0.322537
+        },
+        "studio-flatlay": {
+          "campaignIds": [
+            "RL-PIN-0802",
+            "RL-PIN-0902"
+          ],
+          "spend": 18500,
+          "impressions": 1950000,
+          "clicks": 22350,
+          "conversions": 481,
+          "revenue": 47366,
+          "ctr": 0.011462,
+          "conversionRate": 0.021521,
+          "cpc": 0.82774,
+          "costPerConversion": 38.461538,
+          "roas": 2.560324,
+          "cpm": 9.487179,
+          "clicksPer1kImpressions": 11.461538,
+          "conversionsPer1kImpressions": 0.246667
+        }
+      },
+      "byStorytelling": {
+        "product-features": {
+          "campaignIds": [
+            "RL-PIN-0801",
+            "RL-PIN-0802",
+            "RL-PIN-0901",
+            "RL-PIN-0902",
+            "RL-MET-0801",
+            "RL-MET-0901"
+          ],
+          "spend": 72000,
+          "impressions": 8650000,
+          "clicks": 145950,
+          "conversions": 2642,
+          "revenue": 299662,
+          "ctr": 0.016873,
+          "conversionRate": 0.018102,
+          "cpc": 0.49332,
+          "costPerConversion": 27.252082,
+          "roas": 4.161972,
+          "cpm": 8.323699,
+          "clicksPer1kImpressions": 16.872832,
+          "conversionsPer1kImpressions": 0.305434
+        }
+      },
+      "latestTwoPinterest": {
+        "campaignIds": [
+          "RL-PIN-0902",
+          "RL-PIN-0901"
+        ],
+        "note": "Ordered by end date, most recent first."
+      }
+    },
+    "marlowe-finch": {
+      "name": "Marlowe & Finch",
+      "currency": "USD",
+      "byCampaign": {
+        "MF-PIN-0801": {
+          "spend": 2900,
+          "impressions": 420000,
+          "clicks": 5460,
+          "conversions": 251,
+          "revenue": 22088,
+          "ctr": 0.013,
+          "conversionRate": 0.045971,
+          "cpc": 0.531136,
+          "costPerConversion": 11.553785,
+          "roas": 7.616552,
+          "cpm": 6.904762,
+          "clicksPer1kImpressions": 13,
+          "conversionsPer1kImpressions": 0.597619
+        },
+        "MF-PIN-0802": {
+          "spend": 2600,
+          "impressions": 380000,
+          "clicks": 6080,
+          "conversions": 109,
+          "revenue": 7848,
+          "ctr": 0.016,
+          "conversionRate": 0.017928,
+          "cpc": 0.427632,
+          "costPerConversion": 23.853211,
+          "roas": 3.018462,
+          "cpm": 6.842105,
+          "clicksPer1kImpressions": 16,
+          "conversionsPer1kImpressions": 0.286842
+        },
+        "MF-PIN-0901": {
+          "spend": 3100,
+          "impressions": 450000,
+          "clicks": 5400,
+          "conversions": 265,
+          "revenue": 24380,
+          "ctr": 0.012,
+          "conversionRate": 0.049074,
+          "cpc": 0.574074,
+          "costPerConversion": 11.698113,
+          "roas": 7.864516,
+          "cpm": 6.888889,
+          "clicksPer1kImpressions": 12,
+          "conversionsPer1kImpressions": 0.588889
+        },
+        "MF-PIN-0902": {
+          "spend": 2800,
+          "impressions": 400000,
+          "clicks": 5600,
+          "conversions": 129,
+          "revenue": 10965,
+          "ctr": 0.014,
+          "conversionRate": 0.023036,
+          "cpc": 0.5,
+          "costPerConversion": 21.705426,
+          "roas": 3.916071,
+          "cpm": 7,
+          "clicksPer1kImpressions": 14,
+          "conversionsPer1kImpressions": 0.3225
+        },
+        "MF-MET-0801": {
+          "spend": 4200,
+          "impressions": 700000,
+          "clicks": 7000,
+          "conversions": 273,
+          "revenue": 24570,
+          "ctr": 0.01,
+          "conversionRate": 0.039,
+          "cpc": 0.6,
+          "costPerConversion": 15.384615,
+          "roas": 5.85,
+          "cpm": 6,
+          "clicksPer1kImpressions": 10,
+          "conversionsPer1kImpressions": 0.39
+        },
+        "MF-MET-0901": {
+          "spend": 4500,
+          "impressions": 760000,
+          "clicks": 8360,
+          "conversions": 368,
+          "revenue": 34592,
+          "ctr": 0.011,
+          "conversionRate": 0.044019,
+          "cpc": 0.538278,
+          "costPerConversion": 12.228261,
+          "roas": 7.687111,
+          "cpm": 5.921053,
+          "clicksPer1kImpressions": 11,
+          "conversionsPer1kImpressions": 0.484211
+        },
+        "MF-GOO-0901": {
+          "spend": 2300,
+          "impressions": 120000,
+          "clicks": 6240,
+          "conversions": 250,
+          "revenue": 23750,
+          "ctr": 0.052,
+          "conversionRate": 0.040064,
+          "cpc": 0.36859,
+          "costPerConversion": 9.2,
+          "roas": 10.326087,
+          "cpm": 19.166667,
+          "clicksPer1kImpressions": 52,
+          "conversionsPer1kImpressions": 2.083333
+        }
+      },
+      "byChannelPeriod": {
+        "Pinterest|2026-08": {
+          "spend": 5500,
+          "impressions": 800000,
+          "clicks": 11540,
+          "conversions": 360,
+          "revenue": 29936,
+          "ctr": 0.014425,
+          "conversionRate": 0.031196,
+          "cpc": 0.476603,
+          "costPerConversion": 15.277778,
+          "roas": 5.442909,
+          "cpm": 6.875,
+          "clicksPer1kImpressions": 14.425,
+          "conversionsPer1kImpressions": 0.45
+        },
+        "Pinterest|2026-09": {
+          "spend": 5900,
+          "impressions": 850000,
+          "clicks": 11000,
+          "conversions": 394,
+          "revenue": 35345,
+          "ctr": 0.012941,
+          "conversionRate": 0.035818,
+          "cpc": 0.536364,
+          "costPerConversion": 14.974619,
+          "roas": 5.990678,
+          "cpm": 6.941176,
+          "clicksPer1kImpressions": 12.941176,
+          "conversionsPer1kImpressions": 0.463529
+        },
+        "Meta|2026-08": {
+          "spend": 4200,
+          "impressions": 700000,
+          "clicks": 7000,
+          "conversions": 273,
+          "revenue": 24570,
+          "ctr": 0.01,
+          "conversionRate": 0.039,
+          "cpc": 0.6,
+          "costPerConversion": 15.384615,
+          "roas": 5.85,
+          "cpm": 6,
+          "clicksPer1kImpressions": 10,
+          "conversionsPer1kImpressions": 0.39
+        },
+        "Meta|2026-09": {
+          "spend": 4500,
+          "impressions": 760000,
+          "clicks": 8360,
+          "conversions": 368,
+          "revenue": 34592,
+          "ctr": 0.011,
+          "conversionRate": 0.044019,
+          "cpc": 0.538278,
+          "costPerConversion": 12.228261,
+          "roas": 7.687111,
+          "cpm": 5.921053,
+          "clicksPer1kImpressions": 11,
+          "conversionsPer1kImpressions": 0.484211
+        },
+        "Google|2026-09": {
+          "spend": 2300,
+          "impressions": 120000,
+          "clicks": 6240,
+          "conversions": 250,
+          "revenue": 23750,
+          "ctr": 0.052,
+          "conversionRate": 0.040064,
+          "cpc": 0.36859,
+          "costPerConversion": 9.2,
+          "roas": 10.326087,
+          "cpm": 19.166667,
+          "clicksPer1kImpressions": 52,
+          "conversionsPer1kImpressions": 2.083333
+        }
+      },
+      "byVisualStyle": {
+        "studio-plain": {
+          "campaignIds": [
+            "MF-PIN-0801",
+            "MF-PIN-0901",
+            "MF-PIN-0902",
+            "MF-MET-0801",
+            "MF-MET-0901"
+          ],
+          "spend": 17500,
+          "impressions": 2730000,
+          "clicks": 31820,
+          "conversions": 1286,
+          "revenue": 116595,
+          "ctr": 0.011656,
+          "conversionRate": 0.040415,
+          "cpc": 0.549969,
+          "costPerConversion": 13.608087,
+          "roas": 6.662571,
+          "cpm": 6.410256,
+          "clicksPer1kImpressions": 11.655678,
+          "conversionsPer1kImpressions": 0.471062
+        },
+        "product-grid": {
+          "campaignIds": [
+            "MF-PIN-0802"
+          ],
+          "spend": 2600,
+          "impressions": 380000,
+          "clicks": 6080,
+          "conversions": 109,
+          "revenue": 7848,
+          "ctr": 0.016,
+          "conversionRate": 0.017928,
+          "cpc": 0.427632,
+          "costPerConversion": 23.853211,
+          "roas": 3.018462,
+          "cpm": 6.842105,
+          "clicksPer1kImpressions": 16,
+          "conversionsPer1kImpressions": 0.286842
+        }
+      },
+      "byStorytelling": {
+        "founder-letter": {
+          "campaignIds": [
+            "MF-PIN-0801",
+            "MF-MET-0901"
+          ],
+          "spend": 7400,
+          "impressions": 1180000,
+          "clicks": 13820,
+          "conversions": 619,
+          "revenue": 56680,
+          "ctr": 0.011712,
+          "conversionRate": 0.04479,
+          "cpc": 0.535456,
+          "costPerConversion": 11.954766,
+          "roas": 7.659459,
+          "cpm": 6.271186,
+          "clicksPer1kImpressions": 11.711864,
+          "conversionsPer1kImpressions": 0.524576
+        },
+        "discount-announcement": {
+          "campaignIds": [
+            "MF-PIN-0802"
+          ],
+          "spend": 2600,
+          "impressions": 380000,
+          "clicks": 6080,
+          "conversions": 109,
+          "revenue": 7848,
+          "ctr": 0.016,
+          "conversionRate": 0.017928,
+          "cpc": 0.427632,
+          "costPerConversion": 23.853211,
+          "roas": 3.018462,
+          "cpm": 6.842105,
+          "clicksPer1kImpressions": 16,
+          "conversionsPer1kImpressions": 0.286842
+        },
+        "customer-story": {
+          "campaignIds": [
+            "MF-PIN-0901",
+            "MF-MET-0801"
+          ],
+          "spend": 7300,
+          "impressions": 1150000,
+          "clicks": 12400,
+          "conversions": 538,
+          "revenue": 48950,
+          "ctr": 0.010783,
+          "conversionRate": 0.043387,
+          "cpc": 0.58871,
+          "costPerConversion": 13.568773,
+          "roas": 6.705479,
+          "cpm": 6.347826,
+          "clicksPer1kImpressions": 10.782609,
+          "conversionsPer1kImpressions": 0.467826
+        },
+        "product-features": {
+          "campaignIds": [
+            "MF-PIN-0902"
+          ],
+          "spend": 2800,
+          "impressions": 400000,
+          "clicks": 5600,
+          "conversions": 129,
+          "revenue": 10965,
+          "ctr": 0.014,
+          "conversionRate": 0.023036,
+          "cpc": 0.5,
+          "costPerConversion": 21.705426,
+          "roas": 3.916071,
+          "cpm": 7,
+          "clicksPer1kImpressions": 14,
+          "conversionsPer1kImpressions": 0.3225
+        }
+      },
+      "latestTwoPinterest": {
+        "campaignIds": [
+          "MF-PIN-0902",
+          "MF-PIN-0901"
+        ],
+        "note": "Ordered by end date, most recent first."
+      }
+    },
+    "velvet-static": {
+      "name": "Velvet Static",
+      "currency": "USD",
+      "byCampaign": {
+        "VS-MET-0801": {
+          "spend": 21000,
+          "impressions": 900000,
+          "clicks": 27900,
+          "conversions": 614,
+          "revenue": 85960,
+          "ctr": 0.031,
+          "conversionRate": 0.022007,
+          "cpc": 0.752688,
+          "costPerConversion": 34.201954,
+          "roas": 4.093333,
+          "cpm": 23.333333,
+          "clicksPer1kImpressions": 31,
+          "conversionsPer1kImpressions": 0.682222
+        },
+        "VS-MET-0901": {
+          "spend": 24000,
+          "impressions": 1000000,
+          "clicks": 34000,
+          "conversions": 816,
+          "revenue": 122400,
+          "ctr": 0.034,
+          "conversionRate": 0.024,
+          "cpc": 0.705882,
+          "costPerConversion": 29.411765,
+          "roas": 5.1,
+          "cpm": 24,
+          "clicksPer1kImpressions": 34,
+          "conversionsPer1kImpressions": 0.816
+        },
+        "VS-PIN-0901": {
+          "spend": 3500,
+          "impressions": 500000,
+          "clicks": 7000,
+          "conversions": 140,
+          "revenue": 18200,
+          "ctr": 0.014,
+          "conversionRate": 0.02,
+          "cpc": 0.5,
+          "costPerConversion": 25,
+          "roas": 5.2,
+          "cpm": 7,
+          "clicksPer1kImpressions": 14,
+          "conversionsPer1kImpressions": 0.28
+        }
+      },
+      "byChannelPeriod": {
+        "Meta|2026-08": {
+          "spend": 21000,
+          "impressions": 900000,
+          "clicks": 27900,
+          "conversions": 614,
+          "revenue": 85960,
+          "ctr": 0.031,
+          "conversionRate": 0.022007,
+          "cpc": 0.752688,
+          "costPerConversion": 34.201954,
+          "roas": 4.093333,
+          "cpm": 23.333333,
+          "clicksPer1kImpressions": 31,
+          "conversionsPer1kImpressions": 0.682222
+        },
+        "Meta|2026-09": {
+          "spend": 24000,
+          "impressions": 1000000,
+          "clicks": 34000,
+          "conversions": 816,
+          "revenue": 122400,
+          "ctr": 0.034,
+          "conversionRate": 0.024,
+          "cpc": 0.705882,
+          "costPerConversion": 29.411765,
+          "roas": 5.1,
+          "cpm": 24,
+          "clicksPer1kImpressions": 34,
+          "conversionsPer1kImpressions": 0.816
+        },
+        "Pinterest|2026-09": {
+          "spend": 3500,
+          "impressions": 500000,
+          "clicks": 7000,
+          "conversions": 140,
+          "revenue": 18200,
+          "ctr": 0.014,
+          "conversionRate": 0.02,
+          "cpc": 0.5,
+          "costPerConversion": 25,
+          "roas": 5.2,
+          "cpm": 7,
+          "clicksPer1kImpressions": 14,
+          "conversionsPer1kImpressions": 0.28
+        }
+      },
+      "byVisualStyle": {
+        "neon-high-contrast": {
+          "campaignIds": [
+            "VS-MET-0801",
+            "VS-MET-0901"
+          ],
+          "spend": 45000,
+          "impressions": 1900000,
+          "clicks": 61900,
+          "conversions": 1430,
+          "revenue": 208360,
+          "ctr": 0.032579,
+          "conversionRate": 0.023102,
+          "cpc": 0.726979,
+          "costPerConversion": 31.468531,
+          "roas": 4.630222,
+          "cpm": 23.684211,
+          "clicksPer1kImpressions": 32.578947,
+          "conversionsPer1kImpressions": 0.752632
+        },
+        "studio-plain": {
+          "campaignIds": [
+            "VS-PIN-0901"
+          ],
+          "spend": 3500,
+          "impressions": 500000,
+          "clicks": 7000,
+          "conversions": 140,
+          "revenue": 18200,
+          "ctr": 0.014,
+          "conversionRate": 0.02,
+          "cpc": 0.5,
+          "costPerConversion": 25,
+          "roas": 5.2,
+          "cpm": 7,
+          "clicksPer1kImpressions": 14,
+          "conversionsPer1kImpressions": 0.28
+        }
+      },
+      "byStorytelling": {
+        "countdown-teaser": {
+          "campaignIds": [
+            "VS-MET-0801",
+            "VS-MET-0901"
+          ],
+          "spend": 45000,
+          "impressions": 1900000,
+          "clicks": 61900,
+          "conversions": 1430,
+          "revenue": 208360,
+          "ctr": 0.032579,
+          "conversionRate": 0.023102,
+          "cpc": 0.726979,
+          "costPerConversion": 31.468531,
+          "roas": 4.630222,
+          "cpm": 23.684211,
+          "clicksPer1kImpressions": 32.578947,
+          "conversionsPer1kImpressions": 0.752632
+        },
+        "none": {
+          "campaignIds": [
+            "VS-PIN-0901"
+          ],
+          "spend": 3500,
+          "impressions": 500000,
+          "clicks": 7000,
+          "conversions": 140,
+          "revenue": 18200,
+          "ctr": 0.014,
+          "conversionRate": 0.02,
+          "cpc": 0.5,
+          "costPerConversion": 25,
+          "roas": 5.2,
+          "cpm": 7,
+          "clicksPer1kImpressions": 14,
+          "conversionsPer1kImpressions": 0.28
+        }
+      },
+      "latestTwoPinterest": null
+    }
+  }
+}

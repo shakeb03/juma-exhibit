@@ -2,12 +2,12 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { submitTurnRequestSchema, type TurnSummary } from "@exhibit/contracts";
 import {
-  TooManyPendingTurnsError, getExecution, getOrCreateClientConversation, getVersion, getArtifact, listEvents, listTurns,
+  TooManyPendingTurnsError, loadClientProfile, loadClientSources, getExecution, getOrCreateClientConversation, getVersion, getArtifact, listEvents, listTurns,
   listVersions, requestCancel, submitTurn, validateClientAttachments, type Database,
 } from "@exhibit/database";
 import type { AgentReply, Block } from "@exhibit/contracts";
 import { renderBlocks, renderReply } from "../agent/render.js";
-import type { RegistryMetric } from "../agent/registry.js";
+import { formatMetric, type RegistryMetric } from "../agent/registry.js";
 import type { Config } from "../config.js";
 
 type Session = NonNullable<FastifyRequest["session"]>;
@@ -15,6 +15,9 @@ type Session = NonNullable<FastifyRequest["session"]>;
 function fail(reply: FastifyReply, request: FastifyRequest, status: number, code: string, message: string) {
   return reply.status(status).send({ error: { code, message, requestId: request.id } });
 }
+
+/** A metric as the browser needs it: the calculation record plus the display string. */
+const withDisplay = (metric: RegistryMetric) => ({ ...metric, display: formatMetric(metric) });
 
 interface ReplyData {
   reply?: AgentReply;
@@ -40,15 +43,54 @@ function presentReply(kind: string | null, message: string | null, data: ReplyDa
   return {
     kind,
     ...rendered,
+    // The same reply with {{metric-id}} placeholders intact, so each number can be shown as an inspectable element.
+    raw: data.reply,
     claims: data.claims ?? null,
     // Evidence for the numbers in this answer: formula, inputs, and the rows behind each.
-    evidence: Object.fromEntries([...cited].filter((id) => metrics[id]).map((id) => [id, metrics[id]])),
+    evidence: Object.fromEntries([...cited].filter((id) => metrics[id]).map((id) => [id, withDisplay(metrics[id]!)])),
   };
 }
 
 export function conversationRoutes(app: FastifyInstance, options: { db: Database; config: Pick<Config, "commit"> }, done: (err?: Error) => void) {
   const { db, config } = options;
   const session = (request: FastifyRequest): Session => request.session!;
+
+  // The context the workspace already holds for a client, so nobody has to re-explain the brand.
+  app.get<{ Params: { clientId: string } }>("/v1/clients/:clientId", async (request, reply) => {
+    const params = z.object({ clientId: z.string().uuid() }).safeParse(request.params);
+    if (!params.success) return fail(reply, request, 400, "bad_request", "Invalid client ID.");
+    const { agencyId } = session(request);
+    const profile = await loadClientProfile(db, agencyId, params.data.clientId);
+    if (!profile) return fail(reply, request, 404, "not_found", "Client not found.");
+    const sources = await loadClientSources(db, agencyId, profile.id);
+    const periods = await db.query(
+      "select min(period) as first, max(period) as last from campaign_rows where agency_id = $1 and client_id = $2",
+      [agencyId, profile.id],
+    );
+    return {
+      ...profile,
+      reportingPeriod: periods.rows[0]?.last ? { first: periods.rows[0].first, last: periods.rows[0].last } : null,
+      sources: sources.map(({ id, kind, name, mimeType, sizeBytes, status }) => ({ id, kind, name, mimeType, sizeBytes, status })),
+    };
+  });
+
+  app.get<{ Params: { sourceId: string } }>("/v1/sources/:sourceId/preview", async (request, reply) => {
+    const params = z.object({ sourceId: z.string().uuid() }).safeParse(request.params);
+    if (!params.success) return fail(reply, request, 400, "bad_request", "Invalid source ID.");
+    const { agencyId } = session(request);
+    const result = await db.query(
+      "select id, client_id, kind, name, mime_type, size_bytes, extracted_text from sources where id = $1 and agency_id = $2",
+      [params.data.sourceId, agencyId],
+    );
+    const row = result.rows[0];
+    if (!row) return fail(reply, request, 404, "not_found", "File not found.");
+    const text: string = row.extracted_text ?? "";
+    const limit = 6000;
+    return {
+      id: row.id, clientId: row.client_id, kind: row.kind, name: row.name, mimeType: row.mime_type, sizeBytes: row.size_bytes,
+      text: text.slice(0, limit), truncated: text.length > limit, totalChars: text.length,
+    };
+  });
 
   app.get<{ Params: { clientId: string } }>("/v1/clients/:clientId/conversation", async (request, reply) => {
     const params = z.object({ clientId: z.string().uuid() }).safeParse(request.params);
@@ -163,7 +205,8 @@ export function conversationRoutes(app: FastifyInstance, options: { db: Database
       causeKind: version.causeKind, causeTurnId: version.causeTurnId, createdAt: version.createdAt.toISOString(),
       blocks: version.blocks,
       renderedBlocks: renderBlocks(version.blocks as Block[], (id) => metrics[id]),
-      metrics, scopes: evidence.scopes ?? [], checks: version.checks,
+      metrics: Object.fromEntries(Object.entries(metrics).map(([id, metric]) => [id, withDisplay(metric)])),
+      scopes: evidence.scopes ?? [], checks: version.checks,
     };
   });
 

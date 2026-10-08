@@ -17,6 +17,10 @@ export interface Claims {
 
 export interface ValidationContext {
   registry: MetricRegistry;
+  /** True when this run calculated metrics, so an answer that states nothing is not acceptable. */
+  analysed?: boolean;
+  /** True when the same answer includes an artifact that carries the content. */
+  hasArtifact?: boolean;
   /** Source references the model may cite (campaigns, creative references, documents). */
   knownRefs: Set<string>;
   /** Numbers that legitimately appear in the client's own context or the user's message. */
@@ -144,6 +148,9 @@ export function validateReply(reply: AgentReply, ctx: ValidationContext): ReplyR
         break;
     }
   });
+  if (ctx.analysed && !ctx.hasArtifact && reply.statements.length === 0) {
+    check.problems.push({ path: "reply.statements", message: "You calculated metrics but stated nothing. Give labelled observations (and a hypothesis or recommendation where useful), or an artifact if one was requested." });
+  }
   const hasObservation = reply.statements.some((s) => s.type === "observation");
   if (reply.statements.some((s) => s.type === "recommendation") && !hasObservation) {
     check.problems.push({ path: "reply.statements", message: "A recommendation must rest on at least one observation in the same answer." });

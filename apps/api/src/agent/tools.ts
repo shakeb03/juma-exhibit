@@ -162,6 +162,8 @@ export class ClientToolbox {
   private ref(campaignId: string) {
     const ref = `${this.deps.client.slug}:${campaignId}`;
     this.deps.knownRefs.add(ref);
+    // Models often cite the bare campaign ID. It names the same retrieved record, so accept it too.
+    this.deps.knownRefs.add(campaignId);
     return ref;
   }
 

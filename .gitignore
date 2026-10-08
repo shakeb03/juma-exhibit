@@ -11,3 +11,6 @@ coverage/
 !.env.example
 
 .DS_Store
+
+# Local tooling
+.claude/

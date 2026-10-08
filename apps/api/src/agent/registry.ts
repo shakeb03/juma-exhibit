@@ -110,6 +110,8 @@ const slug = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").re
 export class MetricRegistry {
   private readonly scopes = new Map<string, RegistryScope>();
   private readonly metrics = new Map<string, RegistryMetric>();
+  /** Scopes and comparisons calculated in this run, as opposed to restored from earlier turns. */
+  touched = 0;
 
   /** Calculate metrics for a group of campaign rows and register them. Re-asking for the same rows is a no-op. */
   addScope(label: string, rows: CampaignRow[]): { scope: RegistryScope; set: MetricSet } {
@@ -118,6 +120,7 @@ export class MetricRegistry {
     const existing = [...this.scopes.values()].find((scope) => [...scope.campaignIds].sort().join("|") === key);
     const scopeId = existing?.scopeId ?? this.newScopeId(label, campaignIds);
     const set = calculateMetrics(scopeId, rows);
+    this.touched++;
     const scope: RegistryScope = existing ?? { scopeId, label, campaignIds, warnings: set.warnings };
     this.scopes.set(scopeId, scope);
     for (const metric of Object.values(set.metrics)) {
@@ -159,6 +162,7 @@ export class MetricRegistry {
       const before = this.metrics.get(`metric:${fromScopeId}:${name}`);
       const after = this.metrics.get(`metric:${toScopeId}:${name}`);
       if (!before || !after) continue;
+      this.touched++;
       const change = compareValues(before.value, after.value);
       const reasonFor = (kind: "absolute" | "relative") =>
         before.value === null || after.value === null
@@ -190,6 +194,19 @@ export class MetricRegistry {
   preload(metrics: Record<string, RegistryMetric>, scopes: RegistryScope[]): void {
     for (const [id, metric] of Object.entries(metrics)) this.metrics.set(id, metric);
     for (const scope of scopes) this.scopes.set(scope.scopeId, scope);
+  }
+
+  /** Comparison metrics currently registered, as "from -> to" pairs. */
+  comparisons(): { from: string; to: string }[] {
+    const seen = new Set<string>();
+    for (const id of this.metrics.keys()) {
+      const match = /^cmp:(.+)->(.+):[A-Za-z0-9]+:(?:abs|rel)$/.exec(id);
+      if (match) seen.add(`${match[1]}\u0000${match[2]}`);
+    }
+    return [...seen].map((pair) => {
+      const [from, to] = pair.split("\u0000");
+      return { from: from!, to: to! };
+    });
   }
 
   allMetrics(): Record<string, RegistryMetric> {

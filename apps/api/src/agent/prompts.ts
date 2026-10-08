@@ -53,6 +53,19 @@ export function openArtifactNote(meta: { artifactId: string; kind: string; title
 ${json.length > 14000 ? `${json.slice(0, 14000)}… (truncated)` : json}`;
 }
 
+/** Metrics already calculated earlier in this conversation. Citing them needs no recalculation. */
+export function availableMetricsNote(
+  scopes: { scopeId: string; label: string; campaignIds: string[] }[],
+  comparisons: { from: string; to: string }[],
+): string {
+  if (scopes.length === 0) return "";
+  const lines = scopes.slice(0, 12).map((s) => `- scope "${s.scopeId}" = ${s.label} (campaigns: ${s.campaignIds.join(", ")})`);
+  const cmp = comparisons.slice(0, 6).map((c) => `- change from "${c.from}" to "${c.to}": ids look like cmp:${c.from}->${c.to}:<metric>:abs and :rel`);
+  return `ALREADY CALCULATED IN THIS CONVERSATION (cite these without recalculating; ids are metric:<scope>:<metric name>, for example metric:${scopes[0]!.scopeId}:ctr). Metric names: spend, revenue, roas, conversions, costPerConversion, conversionRate, impressions, clicks, ctr, cpc, cpm, clicksPer1kImpressions, conversionsPer1kImpressions.
+${lines.join("\n")}${cmp.length ? `\n${cmp.join("\n")}` : ""}
+Only call calculate_metrics again for campaigns that are not listed here. Never invent ids.`;
+}
+
 /** Prior turns as conversation history, with verified values filled in. */
 export function historyMessages(turns: StoredTurn[]): ChatMessage[] {
   const messages: ChatMessage[] = [];

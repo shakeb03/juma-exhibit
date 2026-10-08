@@ -96,6 +96,15 @@ describe("validateReply", () => {
     expect(validateReply(fine, context()).problems).toEqual([]);
   });
 
+  it("rejects an answer that did analysis but states nothing, unless an artifact carries the content", () => {
+    const empty: AgentReply = { message: "Done.", statements: [] };
+    const analysed = { ...context(), analysed: true };
+    expect(validateReply(empty, analysed).problems.some((p) => /stated nothing/.test(p.message))).toBe(true);
+    expect(validateReply(empty, { ...analysed, hasArtifact: true }).problems).toEqual([]);
+    // A plain conversational reply with no analysis is fine.
+    expect(validateReply({ message: "Happy to help. What would you like to look at?", statements: [] }, context()).problems).toEqual([]);
+  });
+
   it("rejects an observation with no evidence", () => {
     const reply = { ...goodReply, statements: [{ type: "observation" as const, text: "Performance improved.", metricIds: [], sourceRefs: [] }] };
     expect(validateReply(reply, context()).problems[0]?.message).toMatch(/at least one metric or source/);

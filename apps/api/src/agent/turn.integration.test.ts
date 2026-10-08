@@ -539,6 +539,90 @@ describe("model fallbacks", () => {
   });
 });
 
+describe("follow-ups reuse earlier work", () => {
+  it("cites metrics calculated in an earlier turn without recalculating them", async () => {
+    const w = await h.newWorld();
+    const first = new ScriptedModel(latestTwoScript(() => finish(goodReply())));
+    await w.submit("ridgeline-outfitters", "Compare our last two Pinterest campaigns.");
+    await h.drain(h.worker(first));
+
+    // The follow-up gathers nothing and reuses the verified metrics from the answer above.
+    const second = new ScriptedModel((request) => {
+      if (phase(request) === "gather") return [toolCall("ready_to_answer")];
+      return finish(
+        { message: "Here is the report.", statements: [] },
+        reportArtifact(),
+      );
+    });
+    const { turnId, conversationId } = await w.submit("ridgeline-outfitters", "Make that into a performance report.");
+    await h.drain(h.worker(second));
+    expect((await turnRow(turnId)).status).toBe("succeeded");
+    expect(second.requests.filter((r) => r.task === "interpret")).toHaveLength(1);
+    // The model was told what already exists, so it does not have to guess ids.
+    const system = second.requests[0]!.messages[0]!.content!;
+    expect(system).toMatch(/ALREADY CALCULATED/);
+    expect(system).toContain('scope "RL-PIN-0901"');
+    expect(system).toMatch(/cmp:RL-PIN-0901->RL-PIN-0902/);
+    const version = (await h.db.query("select v.checks from artifact_versions v join artifacts a on a.id = v.artifact_id where a.conversation_id = $1", [conversationId])).rows[0];
+    expect(version.checks.claims.verified).toBe(version.checks.claims.total);
+  });
+
+  it("still rejects ids that were never calculated anywhere in the conversation", async () => {
+    const w = await h.newWorld();
+    const model = new ScriptedModel((request) => {
+      if (phase(request) === "gather") return [toolCall("ready_to_answer")];
+      return finish({ message: "Done.", statements: [observation("CTR was {{metric:RL-PIN-0901:ctr}}.", ["metric:RL-PIN-0901:ctr"])] });
+    });
+    const { turnId } = await w.submit("ridgeline-outfitters", "Make that into a performance report.");
+    await h.drain(h.worker(model));
+    expect((await turnRow(turnId)).status).toBe("failed");
+  });
+
+  it("does not accept an empty answer after calculating metrics", async () => {
+    const w = await h.newWorld();
+    const model = new ScriptedModel(latestTwoScript(() => finish({ message: "Done.", statements: [] })));
+    const { turnId } = await w.submit("ridgeline-outfitters", "Compare our last two Pinterest campaigns.");
+    await h.drain(h.worker(model));
+    expect((await turnRow(turnId)).status).toBe("failed");
+  });
+});
+
+describe("answers that forget the tool", () => {
+  it("nudges a model that replies in plain text and does not spend the repair on it", async () => {
+    const w = await h.newWorld();
+    let composeCalls = 0;
+    const model = new ScriptedModel(latestTwoScript(() => {
+      composeCalls++;
+      return composeCalls <= 2 ? { content: "Here is my answer in plain text." } : finish(goodReply());
+    }));
+    const { turnId } = await w.submit("ridgeline-outfitters", "Compare our last two Pinterest campaigns.");
+    await h.drain(h.worker(model));
+    expect(composeCalls).toBe(3);
+    expect((await turnRow(turnId)).status).toBe("succeeded");
+  });
+
+  it("gives up after a few nudges instead of looping", async () => {
+    const w = await h.newWorld();
+    const model = new ScriptedModel(latestTwoScript(() => ({ content: "I will not use the tool." })));
+    const { turnId } = await w.submit("ridgeline-outfitters", "Compare our last two Pinterest campaigns.");
+    await h.drain(h.worker(model));
+    expect(model.requests.filter((r) => r.task === "explain")).toHaveLength(3);
+    expect((await turnRow(turnId)).status).toBe("failed");
+  });
+
+  it("accepts a bare campaign ID as a citation of the campaign that was retrieved", async () => {
+    const w = await h.newWorld();
+    const model = new ScriptedModel(latestTwoScript(() => {
+      const reply = goodReply();
+      reply.statements[0] = { type: "observation", text: "See the campaign rows.", metricIds: [], sourceRefs: ["RL-PIN-0901", "ridgeline-outfitters:RL-PIN-0902"] };
+      return finish(reply);
+    }));
+    const { turnId } = await w.submit("ridgeline-outfitters", "Compare our last two Pinterest campaigns.");
+    await h.drain(h.worker(model));
+    expect((await turnRow(turnId)).status).toBe("succeeded");
+  });
+});
+
 describe("truncated output", () => {
   it("tells the model its answer was cut off instead of reporting invalid JSON, then accepts a shorter one", async () => {
     const w = await h.newWorld();

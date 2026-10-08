@@ -9,7 +9,7 @@ import type { ChatMessage, ToolCall } from "../ai/types.js";
 import type { RunContext } from "../exec/context.js";
 import { BudgetError, ValidationFailure } from "../exec/errors.js";
 import {
-  COMPOSE_INSTRUCTION, brandExcerpts, checksum, historyMessages, openArtifactNote, systemPrompt, userMessageWithAttachments,
+  COMPOSE_INSTRUCTION, availableMetricsNote, brandExcerpts, checksum, historyMessages, openArtifactNote, systemPrompt, userMessageWithAttachments,
 } from "./prompts.js";
 import { commitTurn, fingerprint, type ArtifactCommit } from "./persist.js";
 import { MetricRegistry, type RegistryMetric, type RegistryScope } from "./registry.js";
@@ -90,6 +90,20 @@ export async function runClientTurn(ctx: RunContext, turnId: string): Promise<vo
   const history = await recentTurns(db, turn.conversationId, turn.seq, 6);
   const excerpts = brandExcerpts(client);
 
+  // Follow-ups inherit what earlier turns already calculated, so "make that a report" or "what is your
+  // evidence" can cite the same verified metrics instead of starting from nothing.
+  for (const earlier of history) {
+    const data = earlier.replyData as { metrics?: Record<string, RegistryMetric>; scopes?: RegistryScope[] } | null;
+    if (data?.metrics) registry.preload(data.metrics, data.scopes ?? []);
+    for (const scope of data?.scopes ?? []) {
+      for (const campaignId of scope.campaignIds) {
+        knownRefs.add(`${client.slug}:${campaignId}`);
+        knownRefs.add(campaignId);
+      }
+    }
+  }
+  const inherited = availableMetricsNote(registry.allScopes(), registry.comparisons());
+
   await setExecutionSnapshot(db, ctx.executionId, {
     routingVersion: ctx.routingVersion,
     routingSnapshot: ctx.routing,
@@ -106,7 +120,13 @@ export async function runClientTurn(ctx: RunContext, turnId: string): Promise<vo
   await recorder.event("progress", "Loaded client context", { client: client.name, history: history.length, openArtifact: base ? `v${base.version}` : null, attachments: attachments.length });
 
   const messages: ChatMessage[] = [
-    { role: "system", content: systemPrompt(client) + (base ? `\n\n${openArtifactNote({ artifactId: base.artifactId, kind: base.kind, title: base.title, version: base.version }, baseBlocks)}` : "") },
+    {
+      role: "system",
+      content:
+        systemPrompt(client) +
+        (inherited ? `\n\n${inherited}` : "") +
+        (base ? `\n\n${openArtifactNote({ artifactId: base.artifactId, kind: base.kind, title: base.title, version: base.version }, baseBlocks)}` : ""),
+    },
     ...historyMessages(history),
     { role: "user", content: userMessageWithAttachments(turn.userMessage, attachments) },
   ];
@@ -166,9 +186,12 @@ export async function runClientTurn(ctx: RunContext, turnId: string): Promise<vo
   let finished: { args: FinishArgs; blocks: Block[]; kind: ArtifactKind | null; claims: Claims; warnings: Problem[] } | null = null;
   let lastProblems: Problem[] = [];
 
-  for (let attempt = 1; attempt <= 2 && !finished; attempt++) {
+  // One repair for content problems. A reply that simply forgot to call finish is a nudge and does not use it up.
+  let contentFailures = 0;
+  let nudges = 0;
+  for (let attempt = 1; !finished && contentFailures < 2 && nudges < 3; attempt++) {
     await ctx.checkpoint();
-    await recorder.event("progress", attempt === 1 ? "Writing the answer" : "Repairing the answer after failed checks");
+    await recorder.event("progress", attempt === 1 ? "Writing the answer" : contentFailures > 0 ? "Repairing the answer after failed checks" : "Asking for the answer again");
     const result = await ctx.models.call("explain", {
       messages,
       tools: [...GATHER_TOOLS, FINISH_TOOL],
@@ -218,6 +241,8 @@ export async function runClientTurn(ctx: RunContext, turnId: string): Promise<vo
     let claims: Claims = { verified: 0, total: 0 };
     let warnings: Problem[] = [];
     if (args) {
+      validation.analysed = registry.touched > 0;
+      validation.hasArtifact = Boolean(args.artifact);
       const replyResult = validateReply(args.reply, validation);
       problems.push(...replyResult.problems);
       claims = replyResult.claims;
@@ -246,12 +271,18 @@ export async function runClientTurn(ctx: RunContext, turnId: string): Promise<vo
     } else {
       lastProblems = problems;
       if (call) {
+        contentFailures++;
         messages.push({
           role: "tool", tool_call_id: call.id,
           content: `Your answer failed checks and was not saved. Fix every problem and call finish again:\n${problems.map((p) => `- ${p.path}: ${p.message}`).join("\n")}`,
         });
+        messages.push({
+          role: "user",
+          content: `Call finish again with the corrected answer. Do not reply with plain text.${args?.artifact ? " Keep the artifact: fix the listed problems inside it rather than dropping it." : ""} Use only metric ids that tools returned or that are listed as already calculated.`,
+        });
       } else {
-        messages.push({ role: "user", content: "Call finish now." });
+        nudges++;
+        messages.push({ role: "user", content: "You must deliver the answer by calling the finish tool. Call it now with your answer." });
       }
     }
   }

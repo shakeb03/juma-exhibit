@@ -30,20 +30,23 @@ export interface ToolboxDeps {
 
 const campaignIdsSchema = z.array(z.string().min(1)).min(1).max(30);
 
+const plan = z.string().max(400).optional();
 const schemas = {
-  discover_sources: z.object({}),
+  discover_sources: z.object({ plan }),
   retrieve_campaigns: z.object({
+    plan,
     channel: z.string().optional(),
     period: z.string().optional(),
     campaignIds: z.array(z.string()).max(30).optional(),
     latest: z.object({ count: z.number().int().min(1).max(10), channel: z.string().optional() }).optional(),
     sourceId: z.string().uuid().optional(),
   }),
-  read_source: z.object({ sourceId: z.string().uuid() }),
-  read_client_context: z.object({}),
-  read_creative_references: z.object({ campaignIds: z.array(z.string()).max(30).optional() }),
-  calculate_metrics: z.object({ label: z.string().min(1).max(120), campaignIds: campaignIdsSchema }),
+  read_source: z.object({ plan, sourceId: z.string().uuid() }),
+  read_client_context: z.object({ plan }),
+  read_creative_references: z.object({ plan, campaignIds: z.array(z.string()).max(30).optional() }),
+  calculate_metrics: z.object({ plan, label: z.string().min(1).max(120), campaignIds: campaignIdsSchema }),
   compare_metrics: z.object({
+    plan,
     fromScopeId: z.string().min(1),
     toScopeId: z.string().min(1),
     metrics: z.array(metricNameSchema).min(1).max(13),
@@ -58,7 +61,7 @@ const fn = (name: keyof typeof schemas | "finish", description: string, paramete
 });
 const noArgs = { type: "object", properties: {}, additionalProperties: false };
 
-export const GATHER_TOOLS: ToolDefinition[] = [
+const GATHER_BASE: ToolDefinition[] = [
   fn("discover_sources", "List this client's campaigns (IDs, channel, period, dates) and files. Start here. Returns metadata only, no performance numbers.", noArgs),
   fn("retrieve_campaigns", "Select campaigns. Use latest to get the most recent campaigns by end date (optionally within one channel), or filter by channel, period, or explicit campaignIds. Pass sourceId to read campaigns from an attached CSV. Returns campaign metadata and which values are missing.", {
     type: "object",
@@ -95,6 +98,18 @@ export const GATHER_TOOLS: ToolDefinition[] = [
   }),
   fn("ready_to_answer", "Call when you have gathered and calculated everything needed to answer. A writing model will compose the answer next.", noArgs),
 ];
+
+/**
+ * On its first call the model states what it is about to do, as a field on the call itself. A forced tool
+ * call returns no free text, so a separate message would never arrive. The text is shown before the steps.
+ */
+const PLAN_FIELD = { type: "string", description: "On your FIRST tool call only: one plain sentence saying what you are about to do. Omit on later calls." };
+const withPlan = (tool: ToolDefinition): ToolDefinition =>
+  ["ask_clarification", "ready_to_answer"].includes(tool.function.name)
+    ? tool
+    : { ...tool, function: { ...tool.function, parameters: { ...tool.function.parameters, properties: { ...(tool.function.parameters.properties as object), plan: PLAN_FIELD } } } };
+
+export const GATHER_TOOLS: ToolDefinition[] = GATHER_BASE.map(withPlan);
 
 export const FINISH_TOOL: ToolDefinition = fn("finish", "Deliver the answer. Always include reply. Include artifact only if the user asked for a deliverable or asked to change the open one.", {
   type: "object",

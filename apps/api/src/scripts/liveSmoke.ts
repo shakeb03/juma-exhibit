@@ -86,6 +86,8 @@ try {
     console.log(`   total cost: $${total.toFixed(4)}`);
     const checks = (await db.query("select payload from execution_events where execution_id = $1 and kind = 'check' order by id", [executionId])).rows;
     for (const c of checks) console.log(`  check: passed=${c.payload.passed} ${c.payload.numericalClaims}${c.payload.problems?.length ? ` problems=${JSON.stringify(c.payload.problems)}` : ""}`);
+    const plan = (await db.query("select payload->>'text' as text from execution_events where execution_id = $1 and kind = 'plan'", [executionId])).rows[0]?.text;
+    console.log(`  plan: ${plan ?? "(none written)"}`);
     const tools = (await db.query("select name from execution_events where execution_id = $1 and kind = 'tool_call' order by id", [executionId])).rows;
     console.log(`  tools: ${tools.map((t) => t.name).join(" -> ")}`);
   }

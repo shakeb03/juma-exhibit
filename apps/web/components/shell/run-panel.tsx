@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CircleAlert, Loader2, XCircle } from "lucide-react";
+import { Check, CircleAlert, Code2, Loader2, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge, EmptyState } from "@/components/ui";
 import { useWorkspace } from "@/components/workspace/context";
@@ -18,6 +18,19 @@ const STATUS_LABEL: Record<string, { label: string; tone: "neutral" | "teal" | "
 };
 
 /** What the system is doing right now and whether it succeeded: real, persisted activity, never mock records. */
+function GeekButton({ executionId }: { executionId: string | null }) {
+  const { openGeek } = useWorkspace();
+  return (
+    <button
+      type="button"
+      onClick={(event) => openGeek(executionId, { trigger: event.currentTarget })}
+      className="mt-4 flex min-h-9 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border-strong px-3 text-sm text-text-muted hover:bg-surface-muted hover:text-text"
+    >
+      <Code2 size={15} aria-hidden /> For geeks
+    </button>
+  );
+}
+
 export function RunPanel() {
   const { activeExecutionId } = useWorkspace();
   const execution = useExecution(activeExecutionId);
@@ -33,9 +46,12 @@ export function RunPanel() {
 
   if (!activeExecutionId) {
     return (
-      <EmptyState title="No run yet">
-        Ask a question and each step the agent takes appears here. Slow, but honest.
-      </EmptyState>
+      <div className="px-5 pb-5">
+        <EmptyState title="No run yet">
+          Ask a question and each step the agent takes appears here. Slow, but honest.
+        </EmptyState>
+        <GeekButton executionId={null} />
+      </div>
     );
   }
   if (execution.isLoading || !execution.data) {
@@ -108,6 +124,7 @@ export function RunPanel() {
           This run failed and nothing was saved. Your earlier work is unchanged. You can send the request again.
         </p>
       )}
+      <GeekButton executionId={activeExecutionId} />
     </div>
   );
 }

@@ -86,8 +86,8 @@ export function BlockXray({ block, metrics, produced, observationOrder }: { bloc
 }
 
 /** One line under a chat answer: which models gathered and wrote it, and how long the work took. */
-export function TurnXray({ calls, tools, claims }: { calls: ModelCallView[] | undefined; tools: number; claims: { verified: number; total: number } | null | undefined }) {
-  const { xray } = useWorkspace();
+export function TurnXray({ calls, tools, claims, executionId }: { calls: ModelCallView[] | undefined; tools: number; claims: { verified: number; total: number } | null | undefined; executionId?: string | null }) {
+  const { xray, openGeek } = useWorkspace();
   if (!xray) return null;
   const good = (calls ?? []).filter((c) => !c.error);
   const by = (task: string) => good.find((c) => c.task === task);
@@ -102,6 +102,12 @@ export function TurnXray({ calls, tools, claims }: { calls: ModelCallView[] | un
           gathered by {gather ? shortModel(gather.actualModel ?? gather.requestedModel) : "unavailable"} · written by {write ? shortModel(write.actualModel ?? write.requestedModel) : "unavailable"}
           {" · "}{tools} tool call{tools === 1 ? "" : "s"} · {good.length} model call{good.length === 1 ? "" : "s"} · {(ms / 1000).toFixed(1)} s of model time · {tokens.toLocaleString()} tokens
           {claims && claims.total > 0 ? ` · ${claims.verified}/${claims.total} numbers verified` : ""}
+          {executionId && (
+            <>
+              {" · "}
+              <button type="button" onClick={(event) => openGeek(executionId, { trigger: event.currentTarget })} className="underline underline-offset-2 hover:text-text">open this run</button>
+            </>
+          )}
         </>
       )}
     </p>

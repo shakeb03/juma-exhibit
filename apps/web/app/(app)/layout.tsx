@@ -1,5 +1,6 @@
 "use client";
 
+import { GeekPanel } from "@/components/geek/geek-panel";
 import { Header } from "@/components/shell/header";
 import { Sidebar } from "@/components/shell/sidebar";
 import { WorkspaceProvider } from "@/components/workspace/context";
@@ -16,6 +17,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <Sidebar />
           </div>
         </div>
+        <GeekPanel />
       </WorkspaceProvider>
     </SessionProvider>
   );

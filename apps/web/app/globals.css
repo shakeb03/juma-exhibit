@@ -96,3 +96,26 @@ body {
 @theme {
   --breakpoint-desk: 1100px;
 }
+
+/* Backstage: the geek panel is deliberately a different mode from the calm workspace. */
+@theme {
+  --color-geek-bg: #08191a;
+  --color-geek-surface: #0e2425;
+  --color-geek-raised: #143031;
+  --color-geek-border: #1f4344;
+  --color-geek-text: #dcebe8;
+  --color-geek-muted: #8fb0ab;
+  --color-geek-teal: #75d7da;
+  --color-geek-amber: #f2c46d;
+  --color-geek-green: #86d6a5;
+  --color-geek-red: #f29a9a;
+}
+
+.hljs { color: #dcebe8; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-built_in { color: #75d7da; }
+.hljs-string, .hljs-attr, .hljs-regexp { color: #f2c46d; }
+.hljs-number, .hljs-symbol, .hljs-bullet { color: #86d6a5; }
+.hljs-comment, .hljs-quote { color: #6f908b; font-style: italic; }
+.hljs-title, .hljs-section, .hljs-name, .hljs-type { color: #b9e4ff; }
+.hljs-variable, .hljs-template-variable, .hljs-params { color: #dcebe8; }
+.hljs-meta, .hljs-doctag { color: #c9b6f0; }

@@ -587,6 +587,48 @@ describe("follow-ups reuse earlier work", () => {
   });
 });
 
+describe("the plan", () => {
+  it("records the agent's own one-sentence plan from its first tool call, and ignores it as a tool argument", async () => {
+    const w = await h.newWorld();
+    let gatherStep = 0;
+    const inner = latestTwoScript(() => finish(goodReply()));
+    const model = new ScriptedModel((request, index, history) => {
+      if (request.task === "interpret" && ++gatherStep === 1) {
+        return [toolCall("discover_sources", { plan: "I'll find the two latest Pinterest campaigns, calculate them, and compare." })];
+      }
+      return inner(request, index, history);
+    });
+    const { turnId, executionId } = await w.submit("ridgeline-outfitters", "Compare our last two Pinterest campaigns.");
+    await h.drain(h.worker(model));
+    expect((await turnRow(turnId)).status).toBe("succeeded");
+    const events = (await w.get(`/v1/executions/${executionId}/events`)).json().events;
+    const plan = events.find((e: { kind: string }) => e.kind === "plan");
+    expect(plan.payload.text).toBe("I'll find the two latest Pinterest campaigns, calculate them, and compare.");
+    // Every gathering tool offers a plan field, and the answer step has none.
+    const gatherTools = model.requests.find((r) => r.task === "interpret")!.tools!;
+    expect(gatherTools.filter((t) => "plan" in (t.function.parameters.properties as object)).length).toBeGreaterThanOrEqual(6);
+  });
+
+  it("records nothing when the agent writes no plan", async () => {
+    const w = await h.newWorld();
+    const model = new ScriptedModel(latestTwoScript(() => finish(goodReply())));
+    const { executionId } = await w.submit("ridgeline-outfitters", "Compare our last two Pinterest campaigns.");
+    await h.drain(h.worker(model));
+    expect((await w.get(`/v1/executions/${executionId}/events`)).json().events.some((e: { kind: string }) => e.kind === "plan")).toBe(false);
+  });
+});
+
+describe("tolerance for omitted empty lists", () => {
+  it("treats a missing statements list as none when an artifact carries the content", async () => {
+    const w = await h.newWorld();
+    const model = new ScriptedModel(latestTwoScript(() => [toolCall("finish", { reply: { message: "The report is ready." }, artifact: reportArtifact() })]));
+    const { turnId, conversationId } = await w.submit("ridgeline-outfitters", "Create a performance report for the last two Pinterest campaigns.");
+    await h.drain(h.worker(model));
+    expect((await turnRow(turnId)).status).toBe("succeeded");
+    expect((await h.db.query("select count(*)::int n from artifacts where conversation_id = $1", [conversationId])).rows[0].n).toBe(1);
+  });
+});
+
 describe("answers that forget the tool", () => {
   it("nudges a model that replies in plain text and does not spend the repair on it", async () => {
     const w = await h.newWorld();

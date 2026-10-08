@@ -89,12 +89,19 @@ class Checker {
     }
   }
 
+  /** A reference resolves if it is a retrieved ref, or the bare ID at the end of one ("MF-C03" for "marlowe-finch:creative:MF-C03"). */
+  private known(ref: string): boolean {
+    if (this.ctx.knownRefs.has(ref)) return true;
+    for (const known of this.ctx.knownRefs) if (known.endsWith(`:${ref}`)) return true;
+    return false;
+  }
+
   refs(path: string, metricIds: string[], sourceRefs: string[]): void {
     for (const id of metricIds) {
       if (!this.ctx.registry.get(id)) this.problems.push({ path, message: `Unknown metric ID "${id}" in metricIds.` });
     }
     for (const ref of sourceRefs) {
-      if (!this.ctx.knownRefs.has(ref)) this.problems.push({ path, message: `Source reference "${ref}" was not retrieved in this run.` });
+      if (!this.known(ref)) this.problems.push({ path, message: `Source reference "${ref}" was not retrieved in this run.` });
     }
   }
 

@@ -25,7 +25,7 @@ export interface SessionOptions {
   db: Database;
   config: Pick<
     Config,
-    "proxySecret" | "appOrigin" | "commit" | "sessionTtlMs" | "agencyTokenBudget" | "sessionCreatesPerHour" | "maxActiveAgencies" | "demoEntryCode" | "fixturesDir"
+    "proxySecret" | "appOrigin" | "commit" | "repository" | "sessionTtlMs" | "agencyTokenBudget" | "sessionCreatesPerHour" | "maxActiveAgencies" | "demoEntryCode" | "fixturesDir"
   >;
 }
 

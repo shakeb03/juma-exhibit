@@ -106,7 +106,8 @@ export type ReplyStatement = z.infer<typeof replyStatementSchema>;
 
 export const agentReplySchema = z.object({
   message: z.string().trim().min(1).max(1500),
-  statements: z.array(replyStatementSchema).max(12),
+  // When an artifact carries the content, a short reply may send no statements at all.
+  statements: z.array(replyStatementSchema).max(12).default([]),
   followUp: z.string().trim().max(500).optional(),
 });
 export type AgentReply = z.infer<typeof agentReplySchema>;

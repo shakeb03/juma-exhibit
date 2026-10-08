@@ -19,6 +19,10 @@ const configSchema = z.object({
   PAYLOAD_MAX_BYTES: z.coerce.number().int().positive().default(100_000),
   RUN_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
   WORKER_ENABLED: z.enum(["true", "false"]).default("true"),
+  REPO_OWNER: z.string().optional(),
+  REPO_NAME: z.string().optional(),
+  REPO_TOKEN: z.string().optional(),
+  REPO_DEFAULT_BRANCH: z.string().default("main"),
   GIT_COMMIT: z.string().optional(),
   RAILWAY_GIT_COMMIT_SHA: z.string().optional(),
 });
@@ -43,6 +47,7 @@ export interface Config {
   runTimeoutMs: number;
   workerEnabled: boolean;
   routing: RoutingTable;
+  repository: { owner: string | null; name: string | null; token: string | null; defaultBranch: string };
 }
 
 /** Validate required configuration at startup and fail with a readable list of problems. */
@@ -74,5 +79,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     runTimeoutMs: value.RUN_TIMEOUT_MS,
     workerEnabled: value.WORKER_ENABLED === "true",
     routing: loadRouting(env),
+    repository: {
+      owner: value.REPO_OWNER ?? null,
+      name: value.REPO_NAME ?? null,
+      token: value.REPO_TOKEN ?? null,
+      defaultBranch: value.REPO_DEFAULT_BRANCH,
+    },
   };
 }

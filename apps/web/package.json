@@ -21,6 +21,7 @@
     "@exhibit/contracts": "workspace:*",
     "@tanstack/react-query": "^5.104.1",
     "clsx": "^2.1.1",
+    "highlight.js": "^11.12.0",
     "lucide-react": "^1.52.0",
     "next": "^16.4.0",
     "react": "^19.3.0",

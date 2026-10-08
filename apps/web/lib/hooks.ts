@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
 import type {
   ArtifactSummary, ArtifactVersionView, ClientProfile, ClientSummary, ConversationView, ExecutionEventView, ExecutionView, ModelCallView,
-  SourcePreview, SourceSummary,
+  ExecutionDetail, ModelPayload, RepoFile, RepoTree, RepositoryMeta, SourcePreview, SourceSummary,
 } from "./types";
 
 export const useClients = () =>
@@ -113,4 +113,46 @@ export const useModelCalls = (executionId: string | null, enabled = true) =>
     queryFn: async () => (await api<{ calls: ModelCallView[] }>(`/executions/${executionId}/model-calls`)).calls,
     enabled: Boolean(executionId) && enabled,
     staleTime: 30_000,
+  });
+
+export const useExecutionDetail = (executionId: string | null) =>
+  useQuery({
+    queryKey: ["execution-detail", executionId],
+    queryFn: () => api<ExecutionDetail>(`/executions/${executionId}/detail`),
+    enabled: Boolean(executionId),
+    staleTime: 10_000,
+  });
+
+export const useModelPayload = (callId: string | null) =>
+  useQuery({
+    queryKey: ["model-payload", callId],
+    queryFn: () => api<ModelPayload>(`/model-calls/${callId}/payload`),
+    enabled: Boolean(callId),
+    staleTime: Infinity,
+  });
+
+export const useRepositoryMeta = (enabled: boolean) =>
+  useQuery({ queryKey: ["repo-meta"], queryFn: () => api<RepositoryMeta>("/repository"), enabled, staleTime: 60_000 });
+
+export const useFrontendCommit = (enabled: boolean) =>
+  useQuery({
+    queryKey: ["frontend-commit"],
+    enabled,
+    staleTime: Infinity,
+    queryFn: async () => {
+      const response = await fetch("/api/meta", { cache: "no-store" });
+      return ((await response.json()) as { frontendCommit: string | null }).frontendCommit;
+    },
+  });
+
+export const useRepoTree = (enabled: boolean) =>
+  useQuery({ queryKey: ["repo-tree"], queryFn: () => api<RepoTree>("/repository/tree"), enabled, staleTime: 5 * 60_000, retry: false });
+
+export const useRepoFile = (path: string | null, ref: string | null) =>
+  useQuery({
+    queryKey: ["repo-file", ref, path],
+    queryFn: () => api<RepoFile>(`/repository/file?path=${encodeURIComponent(path!)}${ref ? `&ref=${encodeURIComponent(ref)}` : ""}`),
+    enabled: Boolean(path),
+    staleTime: Infinity,
+    retry: false,
   });

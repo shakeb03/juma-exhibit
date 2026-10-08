@@ -158,7 +158,7 @@ export function TurnView({
             {reply.claims && reply.claims.total > 0 && (
               <p className="tabular text-xs text-text-muted">Numerical claims verified: {reply.claims.verified}/{reply.claims.total}</p>
             )}
-            <TurnXray calls={xray ? calls.data : undefined} tools={toolCount} claims={reply.claims} />
+            <TurnXray calls={xray ? calls.data : undefined} tools={toolCount} claims={reply.claims} executionId={turn.executionId} />
           </div>
         )}
 

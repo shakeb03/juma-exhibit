@@ -19,7 +19,7 @@ function unitLine(metric: Metric): string {
 
 /** Where the number came from: the claim, the calculation, the rows, and what limits it. Opens inside the main pane. */
 export function EvidenceDrawer() {
-  const { evidence, closeEvidence } = useWorkspace();
+  const { evidence, closeEvidence, openGeek, activeExecutionId } = useWorkspace();
   const closeRef = useRef<HTMLButtonElement>(null);
   const trigger = evidence?.trigger ?? null;
 
@@ -111,6 +111,11 @@ export function EvidenceDrawer() {
         <section aria-label="Check">
           <h3 className="text-xs font-medium text-text-muted">Check</h3>
           <p className="mt-1.5">{unavailable ? "Reported as unavailable instead of zero." : "Matches the independently calculated value for these rows."}</p>
+          {activeExecutionId && (
+            <button type="button" onClick={(event) => { closeEvidence(); openGeek(activeExecutionId, { trigger: event.currentTarget }); }} className="mt-2 text-teal underline underline-offset-2">
+              See the run behind this number
+            </button>
+          )}
         </section>
       </div>
     </aside>

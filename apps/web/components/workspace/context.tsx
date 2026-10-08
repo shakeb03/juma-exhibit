@@ -29,6 +29,15 @@ interface WorkspaceState {
   /** X-ray overlays where every claim came from: metric IDs, checks, and the models involved. */
   xray: boolean;
   setXray: (on: boolean) => void;
+  /** The geek panel: a layer above the workspace that shows what happened under the hood for a turn. */
+  geek: { open: boolean; executionId: string | null; tab: "run" | "code"; trigger: HTMLElement | null };
+  openGeek: (executionId: string | null, options?: { tab?: "run" | "code"; trigger?: HTMLElement | null }) => void;
+  closeGeek: () => void;
+  setGeekExecution: (executionId: string) => void;
+  setGeekTab: (tab: "run" | "code") => void;
+  /** Turns of the conversation being viewed, for previous and next controls inside the panel. */
+  geekTurns: { executionId: string; seq: number; label: string }[];
+  setGeekTurns: (turns: { executionId: string; seq: number; label: string }[]) => void;
 }
 
 const Context = createContext<WorkspaceState | null>(null);
@@ -40,6 +49,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [pendingFill, setPendingFill] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [xray, setXray] = useState(false);
+  const [geek, setGeek] = useState<WorkspaceState["geek"]>({ open: false, executionId: null, tab: "run", trigger: null });
+  const [geekTurns, setGeekTurns] = useState<WorkspaceState["geekTurns"]>([]);
 
   // Callbacks are stable, so effects that depend on them do not re-run on every state change.
   const addAttachment = useCallback((id: string) => setAttachments((list) => (list.includes(id) || list.length >= 5 ? list : [...list, id])), []);
@@ -48,6 +59,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const openEvidence = useCallback((metric: Metric, trigger: HTMLElement | null) => setEvidence({ metric, trigger }), []);
   const closeEvidence = useCallback(() => setEvidence(null), []);
   const clearFill = useCallback(() => setPendingFill(null), []);
+  const openGeek = useCallback<WorkspaceState["openGeek"]>(
+    (executionId, options) => setGeek({ open: true, executionId, tab: options?.tab ?? "run", trigger: options?.trigger ?? null }),
+    [],
+  );
+  const closeGeek = useCallback(() => setGeek((g) => ({ ...g, open: false })), []);
+  const setGeekExecution = useCallback((executionId: string) => setGeek((g) => ({ ...g, executionId })), []);
+  const setGeekTab = useCallback((tab: "run" | "code") => setGeek((g) => ({ ...g, tab })), []);
 
   const value = useMemo<WorkspaceState>(
     () => ({
@@ -57,8 +75,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       pendingFill, fillComposer: setPendingFill, clearFill,
       sidebarOpen, setSidebarOpen,
       xray, setXray,
+      geek, openGeek, closeGeek, setGeekExecution, setGeekTab, geekTurns, setGeekTurns,
     }),
-    [xray, attachments, addAttachment, removeAttachment, clearAttachments, activeExecutionId, evidence, openEvidence, closeEvidence, pendingFill, clearFill, sidebarOpen],
+    [geek, openGeek, closeGeek, setGeekExecution, setGeekTab, geekTurns, xray, attachments, addAttachment, removeAttachment, clearAttachments, activeExecutionId, evidence, openEvidence, closeEvidence, pendingFill, clearFill, sidebarOpen],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

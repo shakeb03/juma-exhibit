@@ -137,3 +137,61 @@ export interface SourcePreview {
   truncated: boolean;
   totalChars: number;
 }
+
+export interface ExecutionDetail {
+  id: string;
+  kind: string;
+  status: string;
+  attempt: number;
+  turnId: string | null;
+  conversationId: string | null;
+  seq: number | null;
+  request: string | null;
+  backendCommit: string | null;
+  routingVersion: string | null;
+  routingSnapshot: Record<string, { primary: string; fallbacks: string[]; maxTokens: number }> | null;
+  inputSnapshot: {
+    client?: { id: string; slug: string };
+    attachments?: { id: string; name: string; kind: string }[];
+    contextChecksums?: Record<string, string>;
+    historyTurnIds?: string[];
+    baseArtifact?: { artifactId: string; version: number; kind: string } | null;
+    note?: string;
+    exclusions?: { subject: string; category: string; reason: string }[];
+    connected?: { id: string; type: string; title?: string }[];
+  } | null;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+}
+
+export interface ModelPayload {
+  request: unknown;
+  response: unknown;
+  truncated: boolean;
+}
+
+export interface RepositoryMeta {
+  configured: boolean;
+  owner: string | null;
+  repository: string | null;
+  backendCommit: string | null;
+  defaultBranch: string;
+}
+
+export interface RepoTree {
+  ref: string;
+  pinned: boolean;
+  entries: { path: string; size: number }[];
+}
+
+export interface RepoFile {
+  ref: string;
+  pinned: boolean;
+  path: string;
+  language: string;
+  content: string;
+  size: number;
+}

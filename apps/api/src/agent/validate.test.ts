@@ -115,6 +115,15 @@ describe("validateReply", () => {
     expect(validateReply(reply, context()).problems.some((p) => /not retrieved/.test(p.message))).toBe(true);
   });
 
+  it("accepts the bare ID at the end of a retrieved reference, but nothing that was never retrieved", () => {
+    const ctx = context({ knownRefs: new Set(["marlowe-finch:creative:MF-C03", "marlowe-finch:MF-PIN-0901"]) });
+    const cite = (...refs: string[]): AgentReply => ({ ...goodReply, statements: [{ type: "observation", text: "Noted.", metricIds: [], sourceRefs: refs }] });
+    expect(validateReply(cite("MF-C03", "MF-PIN-0901", "marlowe-finch:creative:MF-C03"), ctx).problems).toEqual([]);
+    expect(validateReply(cite("MF-C09"), ctx).problems.length).toBe(1);
+    // A suffix match needs the separator, so a partial ID cannot sneak through.
+    expect(validateReply(cite("C03"), ctx).problems.length).toBe(1);
+  });
+
   it("requires an observation under any recommendation", () => {
     const reply = { ...goodReply, statements: [goodReply.statements[2]!] };
     expect(validateReply(reply, context()).problems.some((p) => /rest on at least one observation/.test(p.message))).toBe(true);

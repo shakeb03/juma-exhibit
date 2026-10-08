@@ -30,7 +30,7 @@ function Workspace() {
   const router = useRouter();
   const search = useSearchParams();
   const session = useSession();
-  const { setActiveExecutionId, fillComposer, clearAttachments, closeEvidence } = useWorkspace();
+  const { setActiveExecutionId, fillComposer, clearAttachments, closeEvidence, setGeekTurns } = useWorkspace();
 
   const profile = useClientProfile(id);
   const clients = useClients();
@@ -66,6 +66,11 @@ function Workspace() {
     closeEvidence();
     scenarioStarted.current = false;
   }, [id, clearAttachments, closeEvidence]);
+
+  // The panel can step between this conversation's turns.
+  useEffect(() => {
+    setGeekTurns(turns.filter((t) => t.executionId).map((t) => ({ executionId: t.executionId!, seq: t.seq, label: t.userMessage })));
+  }, [turns, setGeekTurns]);
 
   // Reconnect to the latest run after a refresh or navigation.
   useEffect(() => {

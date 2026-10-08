@@ -9,6 +9,7 @@ import type { AgentReply, Block } from "@exhibit/contracts";
 import { renderBlocks, renderReply } from "../agent/render.js";
 import { formatMetric, type RegistryMetric } from "../agent/registry.js";
 import type { Config } from "../config.js";
+import { RepositoryError, RepositoryReader } from "../repository/github.js";
 
 type Session = NonNullable<FastifyRequest["session"]>;
 
@@ -51,8 +52,9 @@ function presentReply(kind: string | null, message: string | null, data: ReplyDa
   };
 }
 
-export function conversationRoutes(app: FastifyInstance, options: { db: Database; config: Pick<Config, "commit"> }, done: (err?: Error) => void) {
+export function conversationRoutes(app: FastifyInstance, options: { db: Database; config: Pick<Config, "commit" | "repository"> }, done: (err?: Error) => void) {
   const { db, config } = options;
+  const repository = new RepositoryReader({ ...config.repository, backendCommit: config.commit });
   const session = (request: FastifyRequest): Session => request.session!;
 
   // The context the workspace already holds for a client, so nobody has to re-explain the brand.
@@ -248,6 +250,33 @@ export function conversationRoutes(app: FastifyInstance, options: { db: Database
       metrics: Object.fromEntries(Object.entries(metrics).map(([id, metric]) => [id, withDisplay(metric)])),
       scopes: evidence.scopes ?? [], checks: version.checks,
     };
+  });
+
+  // ---- In-app code browser: allowlisted source at the deployed commit ----
+  const repoFail = (reply: FastifyReply, request: FastifyRequest, error: unknown) => {
+    if (error instanceof RepositoryError) {
+      const status = { not_configured: 503, bad_request: 400, not_found: 404, unavailable: 502, too_large: 413, not_text: 415 }[error.code];
+      return fail(reply, request, status, `repository_${error.code}`, error.message);
+    }
+    throw error;
+  };
+
+  app.get("/v1/repository", async () => repository.meta());
+
+  app.get<{ Querystring: { ref?: string } }>("/v1/repository/tree", async (request, reply) => {
+    try {
+      return await repository.tree(request.query.ref);
+    } catch (error) {
+      return repoFail(reply, request, error);
+    }
+  });
+
+  app.get<{ Querystring: { path?: string; ref?: string } }>("/v1/repository/file", async (request, reply) => {
+    try {
+      return await repository.file(request.query.path ?? "", request.query.ref);
+    } catch (error) {
+      return repoFail(reply, request, error);
+    }
   });
 
   done();
